@@ -6,6 +6,8 @@ import cv2
 import time
 import pandas as pd
 import os
+from dataStructures import Point, Line
+from voronoi import Voronoi
 
 # Logging Info
 MAX_MOUSE_MOVE_POINTS = 100000 # this many points should be good for ~30 mins of runtime at 60 points per second
@@ -32,53 +34,6 @@ widthImage = 1200
 
 line_width = 6
 point_radius = 8
-
-class Point:
-    def __init__(self, x: float, y: float, color: Tuple[int, int, int] = (0,0,0), vx: float = 0.0, vy: float = 0.0, ax: float = 0.0, ay: float = 0.0) -> None:
-        self.x = x
-        self.y = y
-        self.color = color
-        self.vx = vx
-        self.vy = vy
-        self.ax = ax
-        self.ay = ay
-    def update(self, dt: float = 1.0) -> None:
-        # Update velocity from acceleration
-        self.vx += self.ax * dt
-        self.vy += self.ay * dt
-
-        # Update position
-        self.x += self.vx * dt
-        self.y += self.vy * dt
-
-        # Bounce on X axis
-        if self.x < 0:
-            self.x = 0
-            self.vx *= -1
-        elif self.x > widthImage:
-            self.x = widthImage
-            self.vx *= -1
-
-        # Bounce on Y axis
-        if self.y < 0:
-            self.y = 0
-            self.vy *= -1
-        elif self.y > heightImage:
-            self.y = heightImage
-            self.vy *= -1
-
-
-    
-class Line:
-    def __init__(self, p1: Point, p2: Point, color: Tuple[int, int, int] = (0,0,0)) -> None:
-        self.point_1 = p1
-        self.point_2 = p2
-        self.color = color
-    
-    def update(self, dt: float = 1.0) -> None:
-        self.point_1.update(dt)
-        self.point_2.update(dt)
-        
 
 # Mapping from class to type code
 class_to_type = {
