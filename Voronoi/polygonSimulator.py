@@ -156,6 +156,13 @@ timestamp = time.strftime("%Y%m%d_%H%M%S")
 folder_name = f"simulation_data_{timestamp}"
 os.makedirs(folder_name, exist_ok=True)
 
+
+simulation_info_df = pd.DataFrame({
+    'parameter': ['timestamp_start','timestamp_end','duration_seconds', 'width', 'height', 'num_points'],
+    'value': [start_time, end_time, execution_duration, widthImage, heightImage, num_points]
+})
+simulation_info_df.to_csv(os.path.join(folder_name, 'simulation_info.csv'), index=False)
+
 # Export timing and bad triangle data per point
 performance_data = []
 for i in range(num_points):
@@ -171,7 +178,11 @@ for i in range(num_points):
 performance_df = pd.DataFrame(performance_data)
 performance_df.to_csv(os.path.join(folder_name, 'performance_log.csv'), index=False)
 
+cv2.imwrite(os.path.join(folder_name, f"simulation_result.png"), image)
+
+print(f"Exported simulation parameters to {folder_name}/simulation_info.csv")
 print(f"Exported performance log to {folder_name}/performance_log.csv")
+print(f"Exported final resulting graph to {folder_name}/simulation_result.png")
 
 
 cv2.destroyAllWindows()
