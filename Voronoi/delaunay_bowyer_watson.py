@@ -4,11 +4,13 @@ from dataStructures import Triangle, Point
 def bowyer_watson(points):
     super_triangle = [Point(-1e5, -1e5), Point(1e5, -1e5), Point(0, 1e5)]
     triangulation = [Triangle(*super_triangle)]# start the triangulation with only the super triangle
+    bad_triangle_count = []
 
     # add each point 1 by 1
     for p in points:
         # find all triangles who's circumference contains the new point
         bad_triangles = [t for t in triangulation if t.circumcircle_contains(p)]
+        bad_triangle_count.append(len(bad_triangles))
         if not bad_triangles:
             # skip when no bad triangles are found
             continue
@@ -50,4 +52,4 @@ def bowyer_watson(points):
         if not skip:
             result.append(t)
 
-    return result
+    return result, bad_triangle_count
