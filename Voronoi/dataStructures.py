@@ -1,8 +1,9 @@
 import math
 from typing import Tuple
+import numpy as np
 
 class Point:
-    def __init__(self, x: float, y: float, color: Tuple[int, int, int] = (0,0,0), vx: float = 0.0, vy: float = 0.0, ax: float = 0.0, ay: float = 0.0, widthImage: int = 0, heightImage: int = 0) -> None:
+    def __init__(self, x: float, y: float, color: Tuple[int, int, int] = (0,0,0), vx: float = 0.0, vy: float = 0.0, ax: float = 0.0, ay: float = 0.0) -> None:
         self.x = x
         self.y = y
         self.color = color
@@ -10,9 +11,8 @@ class Point:
         self.vy = vy
         self.ax = ax
         self.ay = ay
-        self.widthImage = widthImage
-        self.heightImage = heightImage
-    def update(self, dt: float = 1.0) -> None:
+        
+    def update(self, dt: float = 1.0, widthImage: int = 0, heightImage: int = 0) -> None:
         # Update velocity from acceleration
         self.vx += self.ax * dt
         self.vy += self.ay * dt
@@ -25,16 +25,16 @@ class Point:
         if self.x < 0:
             self.x = 0
             self.vx *= -1
-        elif self.x > self.widthImage:
-            self.x = self.widthImage
+        elif self.x > widthImage:
+            self.x = widthImage
             self.vx *= -1
 
         # Bounce on Y axis
         if self.y < 0:
             self.y = 0
             self.vy *= -1
-        elif self.y > self.heightImage:
-            self.y = self.heightImage
+        elif self.y > heightImage:
+            self.y = heightImage
             self.vy *= -1
 
 
@@ -45,11 +45,11 @@ class Line:
         self.point_2 = p2
         self.color = color
     
-    def update(self, dt: float = 1.0) -> None:
-        self.point_1.update(dt)
-        self.point_2.update(dt)
+    def update(self, dt: float = 1.0, widthImage: int = 0, heightImage: int = 0) -> None:
+        self.point_1.update(dt, widthImage, heightImage)
+        self.point_2.update(dt, widthImage, heightImage)
 
-class Edge: # edge formed between two sites
+class Edge: # edge formed between two sites (THIS IS REALLY ONLY NEEDED FOR THE VORONOI DIAGRAM, USE LINE OTHERWISE)
     def __init__(self, p1: Point, p2: Point, startx: float = None):
         
         dy = p1.y - p2.y
@@ -111,4 +111,23 @@ class Event:
         if self.position.y != other.position.y:
             return self.position.y < other.position.y
         return self.position.x < other.position.x
+
+class Triangle:
+    def __init__(self, a: Point, b: Point, c: Point):
+        self.vertices = [a, b, c]
+    
+    def circumcircle_contains(self, point: Point):
+        ax, ay = self.vertices[0].x, self.vertices[0].y
+        bx, by = self.vertices[1].x, self.vertices[1].y
+        cx, cy = self.vertices[2].x, self.vertices[2].y
+        dx, dy = point.x, point.y
+
+        mat = np.array([
+            [ax - dx, ay - dy, (ax - dx) ** 2 + (ay - dy) ** 2],
+            [bx - dx, by - dy, (bx - dx) ** 2 + (by - dy) ** 2],
+            [cx - dx, cy - dy, (cx - dx) ** 2 + (cy - dy) ** 2]
+        ])
+
+        return np.linalg.det(mat) > 0
+
 

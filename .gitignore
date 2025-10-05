@@ -1,2 +1,4 @@
 PolygonSimulation/simulation_analysis_*
 PolygonSimulation/simulation_data_*
+Voronoi/__pycache__/*
+Voronoi/simulation_data_*

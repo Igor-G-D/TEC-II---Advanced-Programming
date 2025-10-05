@@ -6,7 +6,8 @@ import cv2
 import time
 import pandas as pd
 import os
-from dataStructures import Point, Line
+import delaunay_bowyer_watson as delaunay
+from dataStructures import Point, Line, Triangle
 from voronoi import Voronoi
 
 # Logging Info
@@ -33,7 +34,9 @@ heightImage = 800
 widthImage = 1200
 
 line_width = 6
-point_radius = 8
+voronoi_edge_width = 2
+delaunay_edge_width = 1
+point_radius = 5
 
 # Mapping from class to type code
 class_to_type = {
@@ -44,82 +47,15 @@ class_to_type = {
 # Reverse mapping type code -> class
 type_to_class = {v: k for (k, v) in class_to_type.items()}
 
-'''
-# create random lines and points
-num_points = 8
-num_lines = 4
-
-pointList = [Point] * num_points
-lineList = [Line] * num_lines
-
-for i in range(0, num_points):
-    point_x = random.randint(0, widthImage)
-    point_y = random.randint(0, heightImage)
-    point_color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
-    
-    point_acc_x = random.uniform(-1, 1) * 0.2
-
-    point_acc_y = random.uniform(-1, 1) * 0.2
-    
-    pointList[i] = Point(point_x, point_y, point_color, point_acc_x, point_acc_y)
-
-for i in range(0, num_lines):
-    point_x_1 = random.randint(0, widthImage)
-    point_y_1 = random.randint(0, heightImage)
-    
-    point_acc_x_1 = random.uniform(-1, 1) * 0.2
-    point_acc_y_1 = random.uniform(-1, 1) * 0.2
-    
-    point_x_2 = random.randint(0, widthImage)
-    point_y_2 = random.randint(0, heightImage)
-    point_acc_x_2 = random.uniform(-1, 1) * 0.2
-    point_acc_y_2 = random.uniform(-1, 1) * 0.2
-    
-    line_color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
-    
-    lineList[i] = Line(Point(point_x_1, point_y_1, (0,0,0), point_acc_x_1, point_acc_y_1), Point(point_x_2, point_y_2, (0,0,0), point_acc_x_2, point_acc_y_2), line_color)
-
-#storing initial positions to log starting parameters later
-
-points_info = []
-for i, point in enumerate(pointList):
-    points_info.append({
-        'index': i,
-        'initial_x': point.x,
-        'initial_y': point.y,
-        'initial_vx': point.vx,
-        'initial_vy': point.vy,
-        'initial_ax': point.ax,
-        'initial_ay': point.ay,
-        'color_r': point.color[0],
-        'color_g': point.color[1],
-        'color_b': point.color[2]
-    })
-    
-lines_info = []
-for i, line in enumerate(lineList):
-    lines_info.append({
-        'index': i,
-        'point1_x': line.point_1.x,
-        'point1_y': line.point_1.y,
-        'point1_vx': line.point_1.vx,
-        'point1_vy': line.point_1.vy,
-        'point1_ax': line.point_1.ax,
-        'point1_ay': line.point_1.ay,
-        'point2_x': line.point_2.x,
-        'point2_y': line.point_2.y,
-        'point2_vx': line.point_2.vx,
-        'point2_vy': line.point_2.vy,
-        'point2_ax': line.point_2.ax,
-        'point2_ay': line.point_2.ay,
-        'color_r': line.color[0],
-        'color_g': line.color[1],
-        'color_b': line.color[2]
-    })
-'''
+num_points = 0
+num_lines = 0
 
 pointList = []
 lineList = []
+voronoiEdges = []
+delaunayEdges = []
+voronoiTime = []
+delaunayTime = []
 
 # creating image
 image = np.ones((heightImage, widthImage, 3), dtype=np.uint8) * 255
@@ -139,10 +75,8 @@ def point_line_distance(P, A, B): # this calculates the distance between a line 
     return np.linalg.norm(P - closest)
 
 def mouse_callback(event, x, y, flags, param):
-    global mouse_move_size
-    global mouse_click_size
-    global objects_clicked_size
-    global pointList
+    global mouse_move_size, mouse_click_size, objects_clicked_size, pointList, num_points, voronoiEdges, delaunayEdges, voronoiTime, delaunayTime
+
     if event == cv2.EVENT_MOUSEMOVE and mouse_move_size < MAX_MOUSE_MOVE_POINTS:
         mouse_move_xs[mouse_move_size] = x
         mouse_move_ys[mouse_move_size] = y
@@ -170,8 +104,43 @@ def mouse_callback(event, x, y, flags, param):
                 objects_clicked_size += 1
                 
         if not point_clicked:
-            pointList.append(Point(x, y, (0,0,0)))
+            point = Point(x, y, (0,0,0))
+            pointList.append(point)
             print(f"Created point {len(pointList)} at ({x},{y})")
+            print(point.x)
+            num_points += 1
+            
+            
+            if num_points > 1: # start calculating voronoi and delunay triangulation
+                voronoiEdges.clear()
+                voronoi = Voronoi(pointList, widthImage, heightImage)
+                voronoi_start = time.perf_counter()
+                voronoi = Voronoi(pointList, widthImage, heightImage)
+                voronoi.update()
+                voronoi_end = time.perf_counter()
+                
+                voronoiTime.append((voronoi_end - voronoi_start) * 1000)
+                
+                for edge in voronoi.edges:
+                    if edge.start and edge.end:
+                        start = Point(edge.start.x, edge.start.y)
+                        end = Point(edge.end.x, edge.end.y)
+                        voronoiEdges.append(Line(start, end))
+                        
+            if num_points > 2:
+                delaunayEdges.clear()
+                delaunay_start = time.perf_counter()
+                triangles = delaunay.bowyer_watson(pointList)
+                delaunay_end = time.perf_counter()
+                
+                delaunayTime.append((delaunay_end - delaunay_start) * 1000)
+                for tri in triangles:
+                    vertices = tri.vertices
+                    l1 = Line(vertices[0], vertices[1])
+                    l2 = Line(vertices[0], vertices[2])
+                    l3 = Line(vertices[1], vertices[2]) 
+                    
+                    delaunayEdges.extend([l1,l2,l3])
                 
         '''
         # checking lines
@@ -200,19 +169,24 @@ while True:
 
         # Update positions
         for point in pointList:
-            point.update()
+            point.update(1.0, widthImage, heightImage)
             
         for line in lineList:
-            line.update()
+            line.update(1.0,  widthImage, heightImage)
 
         # Draw points
         for point in pointList:
             cv2.circle(image, (int(point.x), int(point.y)), point_radius, point.color, -1)
 
-        # Draw lines
-        for line in lineList:
+        # Draw voronoi edges
+        for line in voronoiEdges:
             cv2.line(image, (int(line.point_1.x), int(line.point_1.y)),
-                    (int(line.point_2.x), int(line.point_2.y)), line.color, line_width)
+                    (int(line.point_2.x), int(line.point_2.y)), [0,0,0], voronoi_edge_width)
+            
+        # Draw delaunay edges
+        for line in delaunayEdges:
+            cv2.line(image, (int(line.point_1.x), int(line.point_1.y)),
+                    (int(line.point_2.x), int(line.point_2.y)), [0,0,255], delaunay_edge_width)
 
         # Display the image
         cv2.imshow("Simulation", image)
@@ -275,5 +249,8 @@ lines_df = pd.DataFrame(lines_info)
 lines_df.to_csv(os.path.join(folder_name, 'lines_info.csv'), index=False)
 '''
 print(f"All data exported to folder: {folder_name}")
+
+print(voronoiTime)
+print(delaunayTime)
 
 cv2.destroyAllWindows()
