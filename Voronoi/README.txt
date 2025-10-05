@@ -26,3 +26,6 @@ muito menos custosa quando comparado com a alternativa de utilizar machine learn
 https://www.youtube.com/watch?v=wtrKToZNgAg
 https://training.galaxyproject.org/training-material/topics/imaging/tutorials/voronoi-segmentation/tutorial.html
 https://s3.eu-central-1.amazonaws.com/ucu.edu.ua/wp-content/uploads/sites/8/2022/12/MS-AMLV_2022_paper_23.pdf
+
+Video demonstrando a execução:
+https://drive.google.com/file/d/1hhfxdPF94osSOObYMKErFsr4lfJb2JEb/view?usp=sharing
