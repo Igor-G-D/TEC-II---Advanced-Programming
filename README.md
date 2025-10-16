@@ -2,6 +2,7 @@
 |-----------|-------------------------------------------|-------------------------------|------------------------------------------|
 | Trabalho 1 | 23/09/2025 15:09 | [Ver no Git](https://github.com/Igor-G-D/TEC-II---Advanced-Programming/tree/main/PolygonSimulation) | ✅ Sim |
 | Trabalho 2 | 05/10/2025 15:43 | [Ver no Git](https://github.com/Igor-G-D/TEC-II---Advanced-Programming/tree/main/Voronoi) | ✅ Sim |
+| Trabalho 3 | 15/10/2025 21:37 | [Ver no Git](https://github.com/Igor-G-D/TEC-II---Advanced-Programming/tree/main/ConvexHull) | ✅ Sim |
 
 
 Note: Os vídeos estão listados no README.md dentro das pastas dos trabalhos
