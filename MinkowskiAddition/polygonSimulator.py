@@ -1,0 +1,159 @@
+import numpy as np
+import cv2
+import time
+import pandas as pd
+import os
+import copy
+from dataStructures import Point, Polygon
+
+# Simulation Info
+heightImage = 800
+widthImage = 1200
+
+point_radius = 5
+
+num_points = 0
+
+pointList = []
+currentPointList= []
+polygonList = []
+
+
+# creating image
+image = np.ones((heightImage, widthImage, 3), dtype=np.uint8) * 255
+
+#creating object image
+obj_window = np.ones((200, 200, 3), dtype=np.uint8) * 255
+
+def point_line_distance(P, A, B): # this calculates the distance between a line defined by points A and B to a point P
+    # Vector from A to B
+    AB = B - A
+    # Vector from A to P
+    AP = P - A
+    # Projection length (normalized)
+    t = np.dot(AP, AB) / np.dot(AB, AB)
+    # Clamp t to [0,1] to stay within the segment
+    t = max(0, min(1, t))
+    # Closest point on segment
+    closest = A + t * AB
+    # Distance from P to closest point
+    return np.linalg.norm(P - closest)
+
+def clearSimulation(clearData = False):
+    global pointList, currentPointList, polygonList
+    global num_points
+    global image
+    
+    print("Clearing all points and polygons")
+    pointList.clear()
+    currentPointList.clear()
+    polygonList.clear()
+    num_points = 0
+    image.fill(255)
+    
+
+        
+def mouse_callback(event, x, y, flags, param):
+    global mouse_move_size, mouse_click_size, objects_clicked_size, pointList, num_points
+    
+    if event == cv2.EVENT_LBUTTONDOWN:
+        
+        point_clicked = False
+        
+        # checking points
+        for i,point in enumerate(pointList):
+            distance = ((x - point.x)**2 + (y - point.y)**2)**0.5
+            if distance <= point_radius:
+                print(f"Mouse inside point {i} at ({x}, {y})")
+                point_clicked = True
+                
+        if not point_clicked:
+            point = Point(x, y, (0,0,0))
+            currentPointList.append(point)
+            pointList.append(point)
+            print(f"Created point {len(pointList)} at ({x},{y})")
+            print(point.x)
+            num_points += 1
+                    
+window_name = "Simulation"
+cv2.namedWindow(window_name)
+cv2.setMouseCallback(window_name, mouse_callback)
+
+
+start_time = time.time()
+keypress = False
+running = True # in case i want to add a pause function later
+
+# Main loop
+while True:
+    if running:
+        # Clear the images
+        image.fill(255)
+        obj_window.fill(255)
+
+        # main simulation window
+        for point in currentPointList:
+            cv2.circle(image, (int(point.x), int(point.y)), point_radius, (255, 0, 0), -1)
+
+        for polygon in polygonList: 
+            pts = np.array([[point.x, point.y] for point in polygon.points], dtype=np.int32)
+            pts = pts.reshape((-1, 1, 2)) 
+            cv2.fillPoly(image, [pts], (255,0,0))
+            
+            
+        # object window
+        for point in currentPointList:
+            cv2.circle(obj_window, (int(point.x), int(point.y)), point_radius, (0, 0, 255), -1)
+
+        cv2.imshow(window_name, image)
+        cv2.imshow("Object", obj_window)
+
+        key = cv2.waitKey(1) & 0xFF
+        if key == 27:  # ESC to exit
+            break
+        elif key == 8:  # Backspace to clear
+            clearSimulation(True)
+        elif key == 13:  # Enter to create polygon
+            polygonList.append(Polygon(copy.deepcopy(currentPointList)))
+            currentPointList = []
+            print("Created polygon")
+
+
+'''
+end_time = time.time()
+execution_duration = end_time - start_time
+print(f"Simulation ran for {execution_duration:.2f} seconds.")
+
+#storing logged info
+
+timestamp = time.strftime("%Y%m%d_%H%M%S")
+folder_name = f"simulation_data_{timestamp}"
+os.makedirs(folder_name, exist_ok=True)
+
+
+simulation_info_df = pd.DataFrame({
+    'parameter': ['timestamp_start','timestamp_end','duration_seconds', 'width', 'height', 'num_points'],
+    'value': [start_time, end_time, execution_duration, widthImage, heightImage, num_points]
+})
+simulation_info_df.to_csv(os.path.join(folder_name, 'simulation_info.csv'), index=False)
+
+# Export timing and bad triangle data per point
+performance_data = []
+for i, pointNum in enumerate(pointList_n):
+    performance_data.append({
+        'convexhull_time_ms': convexHull_time[i-2] if i > 1 and i-2 < len(convexHull_time) else None,
+        'total_points': pointNum,
+        'convexHull_points': convexHull_points_n[i-2] if i > 1 and i-2 < len(convexHull_time) else None
+    })
+
+performance_df = pd.DataFrame(performance_data)
+performance_df.to_csv(os.path.join(folder_name, 'performance_log.csv'), index=False)
+
+cv2.imwrite(os.path.join(folder_name, f"simulation_result.png"), image)
+
+print(f"Exported simulation parameters to {folder_name}/simulation_info.csv")
+print(f"Exported performance log to {folder_name}/performance_log.csv")
+print(f"Exported final resulting graph to {folder_name}/simulation_result.png")
+
+'''
+cv2.destroyAllWindows()
