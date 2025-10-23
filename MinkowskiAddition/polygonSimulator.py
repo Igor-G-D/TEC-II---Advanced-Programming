@@ -20,10 +20,10 @@ polygonList = []
 
 
 # creating image
-image = np.ones((heightImage, widthImage, 3), dtype=np.uint8) * 255
+main_image = np.ones((heightImage, widthImage, 3), dtype=np.uint8) * 255
 
 #creating object image
-obj_window = np.ones((200, 200, 3), dtype=np.uint8) * 255
+obj_image = np.ones((200, 200, 3), dtype=np.uint8) * 255
 
 def point_line_distance(P, A, B): # this calculates the distance between a line defined by points A and B to a point P
     # Vector from A to B
@@ -40,20 +40,24 @@ def point_line_distance(P, A, B): # this calculates the distance between a line 
     return np.linalg.norm(P - closest)
 
 def clearSimulation(clearData = False):
-    global pointList, currentPointList, polygonList
-    global num_points
-    global image
+    global pointList, currentPointList, polygonList, obj_points
+    global num_points, obj_poly
+    global main_image, obj_image
     
     print("Clearing all points and polygons")
     pointList.clear()
     currentPointList.clear()
     polygonList.clear()
     num_points = 0
-    image.fill(255)
+    main_image.fill(255)
+    
+    obj_points.clear()
+    obj_poly = None
+    obj_image.fill(255)
     
 
         
-def mouse_callback(event, x, y, flags, param):
+def main_mouse_callback(event, x, y, flags, param):
     global mouse_move_size, mouse_click_size, objects_clicked_size, pointList, num_points
     
     if event == cv2.EVENT_LBUTTONDOWN:
@@ -64,20 +68,47 @@ def mouse_callback(event, x, y, flags, param):
         for i,point in enumerate(pointList):
             distance = ((x - point.x)**2 + (y - point.y)**2)**0.5
             if distance <= point_radius:
-                print(f"Mouse inside point {i} at ({x}, {y})")
+                print(f"(Main) Mouse inside point {i} at ({x}, {y})")
                 point_clicked = True
                 
         if not point_clicked:
             point = Point(x, y, (0,0,0))
             currentPointList.append(point)
             pointList.append(point)
-            print(f"Created point {len(pointList)} at ({x},{y})")
+            print(f"(Main) Created point {len(pointList)} at ({x},{y})")
             print(point.x)
             num_points += 1
-                    
-window_name = "Simulation"
-cv2.namedWindow(window_name)
-cv2.setMouseCallback(window_name, mouse_callback)
+            
+            
+obj_points = []
+obj_poly = None
+
+def obj_mouse_callback(event, x, y, flags, param):
+    global mouse_move_size, mouse_click_size, objects_clicked_size, obj_points, obj_poly
+    
+    if event == cv2.EVENT_LBUTTONDOWN and obj_poly == None:
+        
+        point_clicked = False
+        
+        # checking points
+        for i,point in enumerate(obj_points):
+            distance = ((x - point.x)**2 + (y - point.y)**2)**0.5
+            if distance <= point_radius:
+                print(f"(Obj) Mouse inside point {i} at ({x}, {y})")
+                point_clicked = True
+                
+        if not point_clicked:
+            point = Point(x, y, (0,0,0))
+            obj_points.append(point)
+            print(f"(Obj) Created point {len(obj_points)-1} at ({x},{y})")
+            print(point.x)
+
+cv2.namedWindow("Simulation")
+cv2.namedWindow("Object")
+
+cv2.setMouseCallback("Simulation", main_mouse_callback)
+cv2.setMouseCallback("Object", obj_mouse_callback)
+
 
 
 start_time = time.time()
@@ -88,25 +119,30 @@ running = True # in case i want to add a pause function later
 while True:
     if running:
         # Clear the images
-        image.fill(255)
-        obj_window.fill(255)
+        main_image.fill(255)
+        obj_image.fill(255)
 
         # main simulation window
         for point in currentPointList:
-            cv2.circle(image, (int(point.x), int(point.y)), point_radius, (255, 0, 0), -1)
+            cv2.circle(main_image, (int(point.x), int(point.y)), point_radius, (255, 0, 0), -1)
 
         for polygon in polygonList: 
             pts = np.array([[point.x, point.y] for point in polygon.points], dtype=np.int32)
             pts = pts.reshape((-1, 1, 2)) 
-            cv2.fillPoly(image, [pts], (255,0,0))
+            cv2.fillPoly(main_image, [pts], (255,0,0))
             
             
         # object window
-        for point in currentPointList:
-            cv2.circle(obj_window, (int(point.x), int(point.y)), point_radius, (0, 0, 255), -1)
+        for point in obj_points:
+            cv2.circle(obj_image, (int(point.x), int(point.y)), point_radius, (0, 0, 255), -1)
 
-        cv2.imshow(window_name, image)
-        cv2.imshow("Object", obj_window)
+        if obj_poly != None:
+            pts = np.array([[point.x, point.y] for point in obj_poly.points], dtype=np.int32)
+            pts = pts.reshape((-1, 1, 2)) 
+            cv2.fillPoly(obj_image, [pts], (0,0,255))
+
+        cv2.imshow("Simulation", main_image)
+        cv2.imshow("Object", obj_image)
 
         key = cv2.waitKey(1) & 0xFF
         if key == 27:  # ESC to exit
@@ -114,9 +150,15 @@ while True:
         elif key == 8:  # Backspace to clear
             clearSimulation(True)
         elif key == 13:  # Enter to create polygon
-            polygonList.append(Polygon(copy.deepcopy(currentPointList)))
-            currentPointList = []
-            print("Created polygon")
+            if len(currentPointList) > 2:
+                polygonList.append(Polygon(copy.deepcopy(currentPointList)))
+                currentPointList = []
+                print("(Main) Created obstacle")
+                
+            if len(obj_points) > 2 and obj_poly == None:
+                obj_poly = Polygon(copy.deepcopy(obj_points))
+                obj_points = []
+                print("(Obj) Created object")
 
 
 '''
