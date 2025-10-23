@@ -7,7 +7,6 @@ import copy
 from dataStructures import Point, Polygon
 from typing import List
 from minkowski import calc_minkowski
-from convexhull import convexHull
 
 # Simulation Info
 heightImage = 800
@@ -176,12 +175,12 @@ while True:
             clearSimulation(True)
         elif key == 13:  # Enter to create polygon
             if len(currentPointList) > 2:
-                polygonList.append(Polygon(ensure_counter_clockwise(convexHull(currentPointList)))) # algorithm assumes convex polygon
+                polygonList.append(Polygon(ensure_counter_clockwise(currentPointList)))
                 currentPointList = []
                 print("(Main) Created obstacle")
                 
             if len(obj_points) > 2 and obj_poly == None:
-                obj_poly = Polygon(ensure_counter_clockwise(convexHull(obj_points))) # algorithm assumes convex polygon
+                obj_poly = Polygon(ensure_counter_clockwise(obj_points))
                 obj_points = []
                 print("(Obj) Created object")
         elif key == 32: # space to calculate minkowski addition
