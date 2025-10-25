@@ -1,8 +1,8 @@
-PolygonSimulation/simulation_analysis_*
-PolygonSimulation/simulation_data_*
-Voronoi/__pycache__/*
-Voronoi/simulation_data_*
+*/__pycache__/*
+*/simulation_data_*
 ConvexHull/__pycache__/*
-ConvexHull/simulation_data_*
-Voronoi/tempCodeRunnerFile.py
+*/tempCodeRunnerFile.py
 ConvexHull/convexhull_analysis_*
+*/simulation_analysis_*
+
+MinkowskiAddition/__pycache__/convexhull.cpython-312.pyc

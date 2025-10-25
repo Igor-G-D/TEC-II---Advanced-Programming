@@ -33,18 +33,13 @@ def reflect_polygon_through_origin(polygon: Polygon) -> Polygon:
         reflected_points.append(Point(-point.x, -point.y))
     return Polygon(reflected_points, color=polygon.color)
 
-def calc_minkowski(obstacle: Polygon, robot: Polygon) -> Polygon:
-
-    #reflect robot points
-    reflected_robot = reflect_polygon_through_origin(robot)
-    centered_robot = center_polygon_at_origin(reflected_robot)
-
+def minkowski(poly1: Polygon, poly2: Polygon) -> Polygon:
     # find the point with minimum y (and leftmost if tie) in each polygon
-    min_idx1 = find_min_point_index(obstacle.points)
-    min_idx2 = find_min_point_index(centered_robot.points)
+    min_idx1 = find_min_point_index(poly1.points)
+    min_idx2 = find_min_point_index(poly2.points)
     
-    n = len(obstacle.points)
-    m = len(robot.points)
+    n = len(poly1.points)
+    m = len(poly2.points)
     
     i = 0
     j = 0
@@ -52,14 +47,14 @@ def calc_minkowski(obstacle: Polygon, robot: Polygon) -> Polygon:
     
     while i < n or j < m:
         #add current sum point
-        p1 = obstacle.points[(min_idx1 + i) % n]
-        p2 = centered_robot.points[(min_idx2 + j) % m]
+        p1 = poly1.points[(min_idx1 + i) % n]
+        p2 = poly2.points[(min_idx2 + j) % m]
         result_points.append(Point(p1.x + p2.x, p1.y + p2.y))
         
         #Compare angles of next edges to decide which polygon to advance
         if i < n and j < m:
-            next_p1 = obstacle.points[(min_idx1 + i + 1) % n]
-            next_p2 = centered_robot.points[(min_idx2 + j + 1) % m]
+            next_p1 = poly1.points[(min_idx1 + i + 1) % n]
+            next_p2 = poly2.points[(min_idx2 + j + 1) % m]
             
             #vector from current to next point
             vec1 = Point(next_p1.x - p1.x, next_p1.y - p1.y)
@@ -77,4 +72,24 @@ def calc_minkowski(obstacle: Polygon, robot: Polygon) -> Polygon:
         else:
             j += 1
     
-    return Polygon(result_points, color=obstacle.color)
+    return Polygon(result_points)
+
+def minkowski_robot(obstacle: Polygon, robot: Polygon) -> Polygon:
+
+    #reflect robot points
+    reflected_robot = reflect_polygon_through_origin(robot)
+    #center robot points
+    centered_robot = center_polygon_at_origin(reflected_robot)
+    
+    result = minkowski(obstacle, centered_robot)
+    
+    return result
+
+def calc_distance_between_polygons(poly1: Polygon, poly2:Polygon) -> float:
+    reversed_poly2 = reflect_polygon_through_origin(poly2)
+    
+    mink_sum = minkowski(poly1, reversed_poly2)
+    
+    distance = mink_sum.shortest_distance_to_point(Point(0,0))
+    
+    return distance

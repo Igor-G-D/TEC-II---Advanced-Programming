@@ -45,6 +45,21 @@ class Point:
             
     def __repr__(self):
             return f"Point({self.x},{self.y})"
+        
+    def __sub__(self, other: 'Point') -> 'Point':
+        return Point(self.x - other.x, self.y - other.y)
+
+    def __add__(self, other: 'Point') -> 'Point':
+        return Point(self.x + other.x, self.y + other.y)
+    
+    def __mul__(self, scalar: float) -> 'Point':
+        return Point(self.x * scalar, self.y * scalar)
+    
+    def dot(self, other: 'Point') -> float:
+        return self.x * other.x + self.y * other.y
+
+    def magnitude(self) -> float:
+        return math.hypot(self.x, self.y)
 
 
     
@@ -143,5 +158,64 @@ class Polygon:
     def __init__(self, points: List[Point], color: Tuple[int, int, int] = (0,0,0)):
         self.points = points
         self.color = color
-
+        
+        
+    def is_point_inside(self, point: Point) -> bool: # ray casking algorithm
+        x, y = point.x, point.y
+        inside = False
+        
+        n = len(self.points)
+        if n < 3:
+            return False
+        
+        j = n - 1
+        for i in range(n):
+            xi, yi = self.points[i].x, self.points[i].y
+            xj, yj = self.points[j].x, self.points[j].y
+            if ((yi > y) != (yj > y)) and (x < (xj - xi) * (y - yi) / (yj - yi) + xi):
+                inside = not inside
+            j = i
+        
+        return inside # if the ray is inside the polygon, it will intersect and odd number of times, and even if it is outside
+        
+    def shortest_distance_to_point(self, point: Point) -> float:
+        
+        if self.is_point_inside(point):
+            return 0.0 # dist = 0 since it is inside the polygon
+        
+        min_dist = float('inf')
+        
+        # iterate through all edges of the polygon
+        for i in range(len(self.points)):
+            p1 = self.points[i]
+            p2 = self.points[(i + 1) % len(self.points)]
+            
+            # vectors
+            edge_vector = p2 - p1 
+            point_vector = point - p1 
+            
+            r = edge_vector.dot(point_vector)
+            
+            edge_magnitude_sq = edge_vector.x**2 + edge_vector.y**2
+            
+            # Avoid division by zero
+            if edge_magnitude_sq < 1e-9:
+                dist = point_vector.magnitude()
+            else:
+                r /= edge_magnitude_sq
+                
+                if r < 0:
+                    # Closest to p1
+                    dist = point_vector.magnitude()
+                elif r > 1:
+                    # Closest to p2
+                    dist = (point - p2).magnitude()
+                else:
+                    # Closest to the edge itself
+                    projection_magnitude = r * math.sqrt(edge_magnitude_sq)
+                    dist = math.sqrt(point_vector.magnitude()**2 - projection_magnitude**2)
+            
+            min_dist = min(min_dist, dist)
+        
+        return min_dist
 

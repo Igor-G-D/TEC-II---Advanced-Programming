@@ -3,10 +3,10 @@ import cv2
 import time
 import pandas as pd
 import os
-import copy
+import seaborn as sns
 from dataStructures import Point, Polygon
 from typing import List
-from minkowski import calc_minkowski
+from minkowski import minkowski_robot, calc_distance_between_polygons
 from convexhull import convexHull
 
 # Simulation Info
@@ -20,6 +20,9 @@ num_points = 0
 pointList = []
 currentPointList= []
 polygonList = []
+color_palette = sns.color_palette("husl", 20)
+bgr_palette = [(int(b * 255), int(g * 255), int(r * 255)) for r, g, b in color_palette]
+rgb_palette = [(int(r * 255), int(g * 255), int(b * 255)) for r, g, b in color_palette]
 
 
 # creating image
@@ -46,6 +49,7 @@ def clearSimulation(clearData = False):
     global pointList, currentPointList, polygonList, obj_points, expandedPolygons
     global num_points, obj_poly
     global main_image, obj_image
+    global minkowski_time
     
     print("Clearing all points and polygons")
     pointList.clear()
@@ -57,6 +61,10 @@ def clearSimulation(clearData = False):
     obj_points.clear()
     obj_poly = None
     obj_image.fill(255)
+    
+    #logging info
+    
+    minkowski_time.clear()
     
     expandedPolygons = []
     
@@ -133,6 +141,19 @@ keypress = False
 running = True # in case i want to add a pause function later
 expandedPolygons = []
 
+# logging info
+minkowski_time = []
+
+def compute_distance_between_pairs(polygons: List[Polygon]) -> List[List[float]]:
+    n = len(polygons)
+    dist_mat = [[0.0] * n for _ in range(n)]
+    for i in range(n):
+        for j in range(i + 1, n):
+            d = calc_distance_between_polygons(polygons[i], polygons[j])
+            dist_mat[i][j] = d
+            dist_mat[j][i] = d
+    return dist_mat
+
 # Main loop
 while True:
     if running:
@@ -148,22 +169,22 @@ while True:
         for exp_poly in expandedPolygons:
             pts = np.array([[p.x, p.y] for p in exp_poly.points], dtype=np.int32)
             pts = pts.reshape((-1, 1, 2))
-            cv2.fillPoly(main_image, [pts], (0,255,0))
+            cv2.fillPoly(main_image, [pts], (0,0,0))
 
         for polygon in polygonList: 
             pts = np.array([[point.x, point.y] for point in polygon.points], dtype=np.int32)
             pts = pts.reshape((-1, 1, 2)) 
-            cv2.fillPoly(main_image, [pts], (255,0,0))
+            cv2.fillPoly(main_image, [pts], polygon.color)
             
             
         # object window
         for point in obj_points:
-            cv2.circle(obj_image, (int(point.x), int(point.y)), point_radius, (0, 0, 255), -1)
+            cv2.circle(obj_image, (int(point.x), int(point.y)), point_radius, (0, 0, 0), -1)
 
         if obj_poly != None:
             pts = np.array([[point.x, point.y] for point in obj_poly.points], dtype=np.int32)
             pts = pts.reshape((-1, 1, 2)) 
-            cv2.fillPoly(obj_image, [pts], (0,0,255))
+            cv2.fillPoly(obj_image, [pts], (0,0,0))
         
 
         cv2.imshow("Simulation", main_image)
@@ -176,56 +197,74 @@ while True:
             clearSimulation(True)
         elif key == 13:  # Enter to create polygon
             if len(currentPointList) > 2:
-                polygonList.append(Polygon(ensure_counter_clockwise(convexHull(currentPointList)))) # algorithm assumes convex polygon
+                polygonList.append(Polygon(ensure_counter_clockwise(convexHull(currentPointList)), bgr_palette[len(polygonList)])) # algorithm assumes convex polygon
                 currentPointList = []
                 print("(Main) Created obstacle")
                 
             if len(obj_points) > 2 and obj_poly == None:
-                obj_poly = Polygon(ensure_counter_clockwise(convexHull(obj_points))) # algorithm assumes convex polygon
+                obj_poly = Polygon(ensure_counter_clockwise(convexHull(obj_points))) # algorithm assumes convex polygon, also ensuring counter clockwise orientation
                 obj_points = []
                 print("(Obj) Created object")
         elif key == 32: # space to calculate minkowski addition
             if currentPointList == [] and polygonList != [] and obj_poly != None and expandedPolygons == []:
                 for polygon in polygonList:
-                    expandedPolygons.append(calc_minkowski(polygon, obj_poly))
+                    t0 = time.perf_counter()
+                    expandedPoly = minkowski_robot(polygon, obj_poly)
+                    t1 = time.perf_counter()
+                    expandedPolygons.append(expandedPoly)
+                    
+                    # logging info
+                    minkowski_time.append((t1 - t0)*1000)
+                    
                     
 
-
-'''
 end_time = time.time()
 execution_duration = end_time - start_time
 print(f"Simulation ran for {execution_duration:.2f} seconds.")
 
 #storing logged info
 
-timestamp = time.strftime("%Y%m%d_%H%M%S")
-folder_name = f"simulation_data_{timestamp}"
-os.makedirs(folder_name, exist_ok=True)
+if expandedPolygons != []:
+
+    timestamp = time.strftime("%Y%m%d_%H%M%S")
+    folder_name = f"simulation_data_{timestamp}"
+    os.makedirs(folder_name, exist_ok=True)
 
 
-simulation_info_df = pd.DataFrame({
-    'parameter': ['timestamp_start','timestamp_end','duration_seconds', 'width', 'height', 'num_points'],
-    'value': [start_time, end_time, execution_duration, widthImage, heightImage, num_points]
-})
-simulation_info_df.to_csv(os.path.join(folder_name, 'simulation_info.csv'), index=False)
-
-# Export timing and bad triangle data per point
-performance_data = []
-for i, pointNum in enumerate(pointList_n):
-    performance_data.append({
-        'convexhull_time_ms': convexHull_time[i-2] if i > 1 and i-2 < len(convexHull_time) else None,
-        'total_points': pointNum,
-        'convexHull_points': convexHull_points_n[i-2] if i > 1 and i-2 < len(convexHull_time) else None
+    simulation_info_df = pd.DataFrame({
+        'parameter': ['timestamp_start','timestamp_end','duration_seconds', 'width', 'height', 'num_points', 'robot_points_n', 'pallete'],
+        'value': [start_time, end_time, execution_duration, widthImage, heightImage, num_points, len(obj_poly.points), rgb_palette]
     })
+    simulation_info_df.to_csv(os.path.join(folder_name, 'simulation_info.csv'), index=False)
 
-performance_df = pd.DataFrame(performance_data)
-performance_df.to_csv(os.path.join(folder_name, 'performance_log.csv'), index=False)
+    # exporting simulation data
+    performance_data = []
+    for i, poly in enumerate(polygonList):
+        performance_data.append({
+            'minkowski_time_ms': minkowski_time[i],
+            'polygon_size': len(polygonList[i].points)
+        })
 
-cv2.imwrite(os.path.join(folder_name, f"simulation_result.png"), image)
+    performance_df = pd.DataFrame(performance_data)
+    performance_df.to_csv(os.path.join(folder_name, 'performance_log.csv'), index=False)
 
-print(f"Exported simulation parameters to {folder_name}/simulation_info.csv")
-print(f"Exported performance log to {folder_name}/performance_log.csv")
-print(f"Exported final resulting graph to {folder_name}/simulation_result.png")
+    cv2.imwrite(os.path.join(folder_name, f"simulation_result.png"), main_image)
+    cv2.imwrite(os.path.join(folder_name, f"robot_result.png"), obj_image)
 
-'''
+    distance_matrix = compute_distance_between_pairs(expandedPolygons)
+    distance_matrix_df = pd.DataFrame(distance_matrix)
+    
+    distance_matrix_df.columns = [f"Polygon_{i}" for i in range(len(expandedPolygons))]
+    distance_matrix_df.index = [f"Polygon_{i}" for i in range(len(expandedPolygons))]
+    
+    distance_matrix_df.to_csv(os.path.join(folder_name, 'distance_matrix.csv'), index=False)
+
+    print(f"Exported simulation parameters to {folder_name}/simulation_info.csv")
+    print(f"Exported performance log to {folder_name}/performance_log.csv")
+    print(f"Exported final resulting graph to {folder_name}/simulation_result.png")
+    print(f"Exported final resulting robot to {folder_name}/robot_result.png")
+    print(f"Exported distance matrix to {folder_name}/distance_matrix.csv")
+
+    compute_distance_between_pairs(expandedPolygons)
+
 cv2.destroyAllWindows()

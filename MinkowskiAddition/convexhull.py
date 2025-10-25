@@ -1,4 +1,3 @@
-import random
 import matplotlib.pyplot as plt
 from dataStructures import Point
 def convexHull(points):
@@ -22,26 +21,3 @@ def convexHull(points):
 def orientation(p, q, r):
     # negative -> clockwise, positive -> counterclockwise, zero -> collinear
     return (q.y - p.y) * (r.x - q.x) - (q.x - p.x) * (r.y - q.y)
-
-def random_points(n, x_range=(0, 10), y_range=(0, 10)):
-    pts = []
-    for _ in range(n):
-        x = random.uniform(*x_range)
-        y = random.uniform(*y_range)
-        pts.append(Point(x, y))
-    return pts
-
-def plot_hull(points, hull_points):
-    xs = [p.x for p in points]
-    ys = [p.y for p in points]
-    plt.scatter(xs, ys, color='blue', label='All points')
-    # highlight hull points
-    hx = [p.x for p in hull_points]
-    hy = [p.y for p in hull_points]
-    plt.scatter(hx, hy, color='red', label='Convex hull points')
-    plt.xlabel('x')
-    plt.ylabel('y')
-    plt.title('Convex Hull of Random Points')
-    plt.legend()
-    plt.axis('equal')  # preserve aspect ratio
-    plt.show()
