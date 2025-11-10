@@ -108,7 +108,7 @@ def paint_cell(img, grid_shape, cell, color=(0,0,0), shape = 0):
         
         cv2.circle(main_image, center, radius, color, -1)
 
-cv2.namedWindow("Simulation", flags=cv2.WINDOW_AUTOSIZE | cv2.WINDOW_KEEPRATIO | cv2.WINDOW_GUI_NORMALs)
+cv2.namedWindow("Simulation", flags=cv2.WINDOW_AUTOSIZE | cv2.WINDOW_KEEPRATIO | cv2.WINDOW_GUI_NORMAL)
 
 cv2.setMouseCallback("Simulation", main_mouse_callback)
 
