@@ -58,11 +58,19 @@ def main_mouse_callback(event, x, y, flags, param):
     cell_clicked = which_cell_clicked(x, y)
     if event == cv2.EVENT_LBUTTONDOWN:
         print(f"left mouse button clicked on cell {cell_clicked}")
-        if grid.item(cell_clicked) == 0:
-            gx, gy = cell_clicked
-            grid[gx][gy] = 1
-            print(f"cell {cell_clicked} now is an obstacle")
+        if not cell_clicked in robots and not cell_clicked in goals:
+            if grid.item(cell_clicked) == 0: 
+                gx, gy = cell_clicked
+                grid[gx][gy] = 1
+                print(f"cell {cell_clicked} now is an obstacle")
+            elif grid.item(cell_clicked) == 1:
+                gx, gy = cell_clicked
+                grid[gx][gy] = 0
+                print(f"cell {cell_clicked} is no longer an obstacle")
+            
             reset_window(main_image, robots, goals, paths)
+        else:
+            print(f"position is invalid")
     if event == cv2.EVENT_RBUTTONDOWN:
         print(f"right mouse button clicked on cell {cell_clicked}")
         
@@ -108,6 +116,18 @@ def paint_cell(img, cell, color=(0,0,0), shape = 0):
         
         cv2.circle(main_image, center, radius, color, -1)
         
+        
+def draw_x(img, grid_pos, color=(0, 0, 255), thickness=2):
+    row, col = grid_pos
+
+    x1 = int(col * cell_w)
+    y1 = int(row * cell_h)
+    x2 = int((col + 1) * cell_w)
+    y2 = int((row + 1) * cell_h)
+
+    cv2.line(img, (x1, y1), (x2, y2), (0,0,255), 4)
+    cv2.line(img, (x1, y2), (x2, y1), (0,0,255), 4)
+
 def reset_window(img, robots, destinations, paths):
     img.fill(255)
     draw_grid(img)
@@ -125,7 +145,11 @@ def reset_window(img, robots, destinations, paths):
         
     prev_center = None
     
-    for path in paths: # black points and lines
+    for i, path in enumerate(paths): # black points and lines
+        if path == []: # couldn't reach destination
+            draw_x(img, robots[i])
+            draw_x(img, destinations[i])
+        
         for j, node in enumerate(path):
             row, column = node
             center = (int((column * cell_w) + (cell_w/2)), int((row * cell_h) + (cell_h/2)))

@@ -117,6 +117,7 @@ def a_star_search(grid: List[List[int]], start: Tuple[int, int], goal: Tuple[int
 
     if not found_dest:
         print("Failed to reach destination.")
+        return []
 
 def main():
     grid = [
