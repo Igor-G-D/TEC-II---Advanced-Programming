@@ -54,6 +54,7 @@ def trace_path(cell_details: List[List[Cell]], dest: Tuple[int, int], start: Tup
     path.append(start)
     path.reverse()
     print("Path found:", " -> ".join(str(p) for p in path))
+    return path
 
 def a_star_search(grid: List[List[int]], start: Tuple[int, int], goal: Tuple[int, int]) -> None:
     rows = len(grid)
@@ -97,9 +98,9 @@ def a_star_search(grid: List[List[int]], start: Tuple[int, int], goal: Tuple[int
             if is_destination((nx, ny), goal):
                 cell_details[nx][ny].parent = (x, y)
                 print("Found destination!")
-                trace_path(cell_details, goal, start)
+                res = trace_path(cell_details, goal, start)
                 found_dest = True
-                return
+                return res
 
             if not closed_list[nx][ny]:
                 new_g = cell_details[x][y].g + 1.0
