@@ -5,7 +5,7 @@ import pandas as pd
 import os
 import seaborn as sns
 import math
-from aStarSearch import a_star_search
+from aStarSearch import a_star_search, calculate_heuristic
 # Simulation Info
 heightImage = 800
 widthImage = 1200
@@ -34,6 +34,7 @@ rgb_palette = [(int(r * 255), int(g * 255), int(b * 255)) for r, g, b in color_p
 
 robots = []
 goals = []
+paths = []
 
 # creating image
 main_image = np.ones((heightImage, widthImage, 3), dtype=np.uint8) * 255
@@ -46,7 +47,12 @@ rows, cols = grid_shape
 cell_h = img_h / rows
 cell_w = img_w / cols 
 
-paths = []
+# logs
+
+astar_execution_time = []
+euclidian_distance = []
+path_size = []
+
 
 
 def clearSimulation(clearData = False):
@@ -176,7 +182,6 @@ cv2.setMouseCallback("Simulation", main_mouse_callback)
 start_time = time.time()
 running = True # in case i want to add a pause function later
 initialized = False
-# logging info
 
 # Main loop
 while True:
@@ -192,12 +197,16 @@ while True:
         elif key == 8:  # Backspace to clear
             clearSimulation(True)
         elif key == 13:  # Enter to create polygon
+            astar_execution_time = []
             print("Displaying calculated paths")
             paths = []
             if len(robots) == len(goals):
                 for i, (robot, goal) in enumerate(zip(robots, goals)):
                     print(f"Calculating path for robot {i}")
+                    t0 = time.perf_counter()
                     path = a_star_search(grid, robot, goal)
+                    t1 = time.perf_counter()
+                    astar_execution_time.append((t1 - t0) * 1000)
                     paths.append(path)
                     reset_window(main_image, robots, goals, paths)
                     
@@ -207,48 +216,34 @@ execution_duration = end_time - start_time
 print(f"Simulation ran for {execution_duration:.2f} seconds.")
 
 #storing logged info
-'''
-if expandedPolygons != []:
 
-    timestamp = time.strftime("%Y%m%d_%H%M%S")
-    folder_name = f"simulation_data_{timestamp}"
-    os.makedirs(folder_name, exist_ok=True)
+timestamp = time.strftime("%Y%m%d_%H%M%S")
+folder_name = f"simulation_data_{timestamp}"
+os.makedirs(folder_name, exist_ok=True)
 
 
-    simulation_info_df = pd.DataFrame({
-        'parameter': ['timestamp_start','timestamp_end','duration_seconds', 'width', 'height', 'num_points', 'robot_points_n', 'pallete'],
-        'value': [start_time, end_time, execution_duration, widthImage, heightImage, num_points, len(obj_poly.points), rgb_palette]
+simulation_info_df = pd.DataFrame({
+    'parameter': ['timestamp_start','timestamp_end','duration_seconds', 'width', 'height', 'num_points', 'grid_shape', 'pallete'],
+    'value': [start_time, end_time, execution_duration, widthImage, heightImage, num_points, grid_shape, rgb_palette]
+})
+simulation_info_df.to_csv(os.path.join(folder_name, 'simulation_info.csv'), index=False)
+
+# exporting simulation data
+performance_data = []
+for i in range(len(astar_execution_time)):
+    performance_data.append({
+        'astar_exec_time': astar_execution_time[i],
+        'euclidian_distance': calculate_heuristic(robots[i], goals[i]),
+        'path_size': len(paths[i])
     })
-    simulation_info_df.to_csv(os.path.join(folder_name, 'simulation_info.csv'), index=False)
 
-    # exporting simulation data
-    performance_data = []
-    for i, poly in enumerate(polygonList):
-        performance_data.append({
-            'minkowski_time_ms': minkowski_time[i],
-            'polygon_size': len(polygonList[i].points)
-        })
+performance_df = pd.DataFrame(performance_data)
+performance_df.to_csv(os.path.join(folder_name, 'performance_log.csv'), index=False)
 
-    performance_df = pd.DataFrame(performance_data)
-    performance_df.to_csv(os.path.join(folder_name, 'performance_log.csv'), index=False)
+cv2.imwrite(os.path.join(folder_name, f"simulation_result.png"), main_image)
 
-    cv2.imwrite(os.path.join(folder_name, f"simulation_result.png"), main_image)
-    cv2.imwrite(os.path.join(folder_name, f"robot_result.png"), obj_image)
+print(f"Exported simulation parameters to {folder_name}/simulation_info.csv")
+print(f"Exported performance log to {folder_name}/performance_log.csv")
+print(f"Exported final resulting graph to {folder_name}/simulation_result.png")
 
-    distance_matrix = compute_distance_between_pairs(expandedPolygons)
-    distance_matrix_df = pd.DataFrame(distance_matrix)
-    
-    distance_matrix_df.columns = [f"Polygon_{i}" for i in range(len(expandedPolygons))]
-    distance_matrix_df.index = [f"Polygon_{i}" for i in range(len(expandedPolygons))]
-    
-    distance_matrix_df.to_csv(os.path.join(folder_name, 'distance_matrix.csv'), index=False)
-
-    print(f"Exported simulation parameters to {folder_name}/simulation_info.csv")
-    print(f"Exported performance log to {folder_name}/performance_log.csv")
-    print(f"Exported final resulting graph to {folder_name}/simulation_result.png")
-    print(f"Exported final resulting robot to {folder_name}/robot_result.png")
-    print(f"Exported distance matrix to {folder_name}/distance_matrix.csv")
-
-    compute_distance_between_pairs(expandedPolygons)
-'''
 cv2.destroyAllWindows()
