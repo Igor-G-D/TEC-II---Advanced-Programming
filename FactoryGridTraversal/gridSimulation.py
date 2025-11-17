@@ -157,7 +157,7 @@ def reset_window(img, robots, destinations, paths):
             if i < len(robots):
                 draw_x(img, robots[i].position)
             if i < len(destinations):
-                draw_x(img, destinations[i])
+                draw_x(img, destinations[i].position)
         
         prev_center = None
         for j, node in enumerate(path):
