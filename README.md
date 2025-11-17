@@ -5,6 +5,6 @@
 | Trabalho 3 | 15/10/2025 21:37 | [Ver no Git](https://github.com/Igor-G-D/TEC-II---Advanced-Programming/tree/main/ConvexHull) | ✅ Sim |
 | Trabalho 4 | 25/10/2025 19:23 | [Ver no Git](https://github.com/Igor-G-D/TEC-II---Advanced-Programming/tree/main/MinkowskiAddition) | ✅ Sim |
 | Trabalho 5 | 11/11/2025 15:35 | [Ver no Git](https://github.com/Igor-G-D/TEC-II---Advanced-Programming/tree/main/GridTraversal) | ✅ Sim |
-| Trabalho 6 | 16/11/2025 16:02 | [Ver no Git](https://github.com/Igor-G-D/TEC-II---Advanced-Programming/tree/main/FactoryGridTraversal) | ✅ Sim |
+| Trabalho 6 | 17/11/2025 16:38 | [Ver no Git](https://github.com/Igor-G-D/TEC-II---Advanced-Programming/tree/main/FactoryGridTraversal) | ✅ Sim |
 
 Note: Os vídeos estão listados no README.md dentro das pastas dos trabalhos
