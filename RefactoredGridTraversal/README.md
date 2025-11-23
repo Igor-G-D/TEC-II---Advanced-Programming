@@ -1,0 +1,1 @@
+Added functionality to toggle between purely cardinal movement and movement with diagonals allowed, added factories for the grid itself, for objects (goals and robots), and for the pathfinding algorithm
