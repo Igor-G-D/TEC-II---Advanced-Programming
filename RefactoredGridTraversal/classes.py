@@ -89,31 +89,40 @@ class HexGrid(Grid, metaclass=SingletonGridMeta):
         self.matrix = np.zeros(shape)
     
     def toggle_obstacle(self, position: Tuple[int, int]) -> None:
-        q, r = position
+        r, q = position
         self.matrix[r][q] = 1 if self.matrix[r][q] == 0 else 0
     
     def is_obstacle(self, position: Tuple[int, int]) -> bool:
-        q, r = position
+        r, q = position
         return self.matrix[r][q] == 1
     
     def get_neighbors(self, position: Tuple[int, int]) -> List[Tuple[int, int]]:
-        q, r = position
-        if (r % 2) == 1:  # odd row
+        row, col = position  # position is (row, col)
+        
+        if row % 2 == 1:  # odd row - shifted right
             neighbor_deltas = [
-                (+1, 0), (0, -1), (-1, -1),
-                (-1, 0), (-1, +1), (0, +1)
+                (0, -1),   # West
+                (-1, 0),   # Northwest  
+                (-1, +1),  # Northeast
+                (0, +1),   # East
+                (+1, +1),  # Southeast
+                (+1, 0)    # Southwest
             ]
-        else:  # even row
+        else:  # even row - not shifted
             neighbor_deltas = [
-                (+1, 0), (+1, -1), (0, -1),
-                (-1, 0), (0, +1), (+1, +1)
+                (0, -1),   # West
+                (-1, -1),  # Northwest
+                (-1, 0),   # Northeast
+                (0, +1),   # East  
+                (+1, 0),   # Southeast
+                (+1, -1)   # Southwest
             ]
 
         result = []
-        for dq, dr in neighbor_deltas:
-            nq, nr = q + dq, r + dr
-            if 0 <= nq < self.cols and 0 <= nr < self.rows:
-                result.append((nq, nr))
+        for dr, dc in neighbor_deltas:
+            new_row, new_col = row + dr, col + dc
+            if 0 <= new_row < self.rows and 0 <= new_col < self.cols:
+                result.append((new_row, new_col))
         return result
 
     def offset_to_cube(self, position: Tuple[int, int]) -> Tuple[int, int, int]:
