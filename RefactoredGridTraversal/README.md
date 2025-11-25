@@ -1,1 +1,3 @@
-Added functionality to toggle between purely cardinal movement and movement with diagonals allowed, added factories for the grid itself, for objects (goals and robots), and for the pathfinding algorithm
+included a few design patterns in the implementation, as well as a couple new features:
+
+Included a hexagonal grid, allowed for dijsktra algorithm as well as astar, robots now have each algorithm associated with them, permitting different behaviours. As far as design patterns, singleton design patterns was implemented for the grid, which allowed obstacles to be maintained as the type of grid is swapped, made rectangle grid and hex grid share the same interface (self adapting), added decorators to change the behaviour of robots, specifically, which pathfinding algorithm they use.
