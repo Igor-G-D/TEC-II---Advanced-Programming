@@ -24,5 +24,5 @@ class Grid(ABC):
 
 class PathfindingAlgorithm(ABC):
     @abstractmethod
-    def find_path(self, grid: Grid, start: Tuple[int, int], goal: Tuple[int, int], allow_diagonals: bool) -> List[Tuple[int, int]]:
+    def find_path(self, grid: Grid, start: Tuple[int, int], goal: Tuple[int, int]) -> List[Tuple[int, int]]:
         pass

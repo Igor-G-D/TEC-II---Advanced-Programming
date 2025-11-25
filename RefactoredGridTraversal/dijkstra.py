@@ -18,7 +18,7 @@ def trace_path_dijkstra(cell_details: List[List[DijkstraCell]], dest: Tuple[int,
     path.reverse()
     return path
 
-def dijkstra_search(grid: Grid, start: Tuple[int, int], goal: Tuple[int, int], allow_diagonals: bool) -> List[Tuple[int, int]]:
+def dijkstra_search(grid: Grid, start: Tuple[int, int], goal: Tuple[int, int]) -> List[Tuple[int, int]]:
     rows = grid.rows
     cols = grid.cols
 
@@ -54,13 +54,7 @@ def dijkstra_search(grid: Grid, start: Tuple[int, int], goal: Tuple[int, int], a
             print("Reached goal via Dijkstra")
             return trace_path_dijkstra(cell_details, goal, start)
 
-        from classes import RectangleGrid, HexGrid
-        if isinstance(grid, RectangleGrid):
-            neighbors = grid.get_neighbors((x, y), allow_diagonals)
-        elif isinstance(grid, HexGrid):
-            neighbors = grid.get_neighbors((x, y))
-        else:
-            neighbors = grid.get_neighbors((x, y))
+        neighbors = grid.get_neighbors((x, y)) # now no type checking is required
 
         for (nx, ny) in neighbors:
             if not visited[nx][ny] and not grid.is_obstacle((nx, ny)):
@@ -76,5 +70,5 @@ def dijkstra_search(grid: Grid, start: Tuple[int, int], goal: Tuple[int, int], a
     return []
 
 class DijkstraAlgorithm(PathfindingAlgorithm):
-    def find_path(self, grid: Grid, start: Tuple[int, int], goal: Tuple[int, int], allow_diagonals: bool) -> List[Tuple[int, int]]:
-        return dijkstra_search(grid, start, goal, allow_diagonals)
+    def find_path(grid: Grid, start: Tuple[int, int], goal: Tuple[int, int]) -> List[Tuple[int, int]]:
+        return dijkstra_search(grid, start, goal)

@@ -6,7 +6,7 @@ import os
 import seaborn as sns
 import math
 from factories import DefaultSimulationFactory
-from classes import Simulation
+from classes import Simulation, RectangleGrid
 
 # Simulation Info
 heightImage = 800
@@ -347,7 +347,7 @@ while True:
                         t0 = time.perf_counter()
                         
                         algorithm = simulation.algorithm_factory.create_algorithm(algorithms[algorithm_index % len(algorithms)])
-                        path = algorithm.find_path(simulation.grid, robot.position, goal.position, allow_diagonals)
+                        path = algorithm.find_path(simulation.grid, robot.position, goal.position)
                         
                         t1 = time.perf_counter()
                         astar_execution_time.append((t1 - t0) * 1000)
@@ -359,17 +359,19 @@ while True:
                     reset_window(main_image, simulation.robots, simulation.goals, simulation.paths)
                 else:
                     print("Number of robots and goals must match!")
-            elif key == 49 and not pressed: #tab
+            elif key == 49 and not pressed: #1
                 pressed = True
                 cell_shape_index += 1
                 cell_shape = cell_shape_index % len(cell_shape_names)
                 print(f"board cell shape switched to {cell_shape_names[cell_shape]}")
                 clearSimulation(True)
-            elif key == 50 and not pressed: #tab
-                pressed = True
+            elif key == 50 and not pressed: #2
                 allow_diagonals = not allow_diagonals
+                
+                if isinstance(simulation.grid, RectangleGrid):
+                    simulation.grid.allow_diagonals = allow_diagonals
                 print(f"Diagonal Movement = {allow_diagonals}")
-            elif key == 51 and not pressed:
+            elif key == 51 and not pressed: #3
                 algorithm_index += 1
                 print(f"changed pathfinding algorithm to: {algorithms[algorithm_index % len(algorithms)]}")
             

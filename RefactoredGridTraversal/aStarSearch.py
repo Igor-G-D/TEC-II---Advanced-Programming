@@ -28,7 +28,7 @@ def trace_path(cell_details: List[List[Cell]], dest: Tuple[int, int], start: Tup
     print("Path found:", " -> ".join(str(p) for p in path))
     return path
 
-def a_star_search(grid: Grid, start: Tuple[int, int], goal: Tuple[int, int], allow_diagonals: bool) -> List[Tuple[int, int]]:
+def a_star_search(grid: Grid, start: Tuple[int, int], goal: Tuple[int, int]) -> List[Tuple[int, int]]:
     rows = grid.rows
     cols = grid.cols
 
@@ -64,19 +64,12 @@ def a_star_search(grid: Grid, start: Tuple[int, int], goal: Tuple[int, int], all
 
         closed_list[x][y] = True
 
-        # Get neighbors based on grid type
-        from classes import RectangleGrid, HexGrid
-        if isinstance(grid, RectangleGrid):
-            neighbors = grid.get_neighbors((x, y), allow_diagonals)
-        elif isinstance(grid, HexGrid):
-            neighbors = grid.get_neighbors((x, y))
-        else:
-            neighbors = grid.get_neighbors((x, y))
+        neighbors = grid.get_neighbors((x, y)) # now no type checking is required
 
         for (nx, ny) in neighbors:
             if is_destination((nx, ny), goal):
                 cell_details[nx][ny].parent = (x, y)
-                print("Found destination!")
+                print("Reached goal via astar")
                 return trace_path(cell_details, goal, start)
 
             if not closed_list[nx][ny] and not grid.is_obstacle((nx, ny)):
@@ -96,5 +89,5 @@ def a_star_search(grid: Grid, start: Tuple[int, int], goal: Tuple[int, int], all
 
 
 class AStarAlgorithm(PathfindingAlgorithm):
-    def find_path(self, grid: Grid, start: Tuple[int, int], goal: Tuple[int, int], allow_diagonals: bool) -> List[Tuple[int, int]]:
-        return a_star_search(grid, start, goal, allow_diagonals)
+    def find_path(self, grid: Grid, start: Tuple[int, int], goal: Tuple[int, int]) -> List[Tuple[int, int]]:
+        return a_star_search(grid, start, goal)

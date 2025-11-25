@@ -5,8 +5,8 @@ from interfaces import Grid
 from abc import ABCMeta
 
 class Simulation:
-    def __init__(self, grid_factory, object_factory, algorithm_factory, grid_shape=0, cell_shape=0):
-        self.grid = grid_factory.create_grid(grid_shape, cell_shape)
+    def __init__(self, grid_factory, object_factory, algorithm_factory, grid_shape=0, cell_shape=0, allow_diagonals: bool = False):
+        self.grid = grid_factory.create_grid(grid_shape, cell_shape, allow_diagonals)
         self.object_factory = object_factory
         self.algorithm_factory = algorithm_factory
         self.robots = []
@@ -52,9 +52,10 @@ class SingletonGridMeta(ABCMeta):  # Inherit from ABCMeta
         return cls._instances[cls]
 
 class RectangleGrid(Grid, metaclass=SingletonGridMeta):
-    def __init__(self, shape: Tuple[int, int]):
+    def __init__(self, shape: Tuple[int, int], allow_diagonals: bool = False):
         self.rows, self.cols = shape
         self.matrix = np.zeros(shape)
+        self.allow_diagonals = allow_diagonals # stored state so the class is conforming to the interfaces
     
     def toggle_obstacle(self, position: Tuple[int, int]) -> None:
         x, y = position
@@ -64,7 +65,7 @@ class RectangleGrid(Grid, metaclass=SingletonGridMeta):
         x, y = position
         return self.matrix[x][y] == 1
     
-    def get_neighbors(self, position: Tuple[int, int], allow_diagonals: bool = True) -> List[Tuple[int, int]]:
+    def get_neighbors(self, position: Tuple[int, int]) -> List[Tuple[int, int]]: # removed allow_diagonals from parameters to conform to interface
         x, y = position
         neighbors = []
         # Cardinal moves
@@ -72,7 +73,7 @@ class RectangleGrid(Grid, metaclass=SingletonGridMeta):
             nx, ny = x + dx, y + dy
             if 0 <= nx < self.rows and 0 <= ny < self.cols:
                 neighbors.append((nx, ny))
-        if allow_diagonals:
+        if self.allow_diagonals:
             for dx, dy in [(1, 1), (1, -1), (-1, 1), (-1, -1)]:
                 nx, ny = x + dx, y + dy
                 if 0 <= nx < self.rows and 0 <= ny < self.cols:

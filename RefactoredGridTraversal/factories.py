@@ -40,9 +40,10 @@ class DefaultSimulationFactory(AbstractFactory):
         return AlgorithmFactory()
 
 class GridFactory:
-    def create_grid(self, shape = (20,30), cell_shape=0): # 0 for rectangular, 1 for hex
+    def create_grid(self, shape = (20,30), cell_shape=0, allow_diagonals: bool = False): # 0 for rectangular, 1 for hex, 
+        # allow diagonals is now informed to the factory
         if cell_shape == 0:
-            return RectangleGrid(shape)
+            return RectangleGrid(shape, allow_diagonals)
         elif cell_shape == 1:
             return HexGrid(shape)
 
