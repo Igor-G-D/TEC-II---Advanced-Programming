@@ -101,21 +101,21 @@ class HexGrid(Grid, metaclass=SingletonGridMeta):
         
         if row % 2 == 1:  # odd row - shifted right
             neighbor_deltas = [
-                (0, -1),   # West
-                (-1, 0),   # Northwest  
-                (-1, +1),  # Northeast
-                (0, +1),   # East
-                (+1, +1),  # Southeast
-                (+1, 0)    # Southwest
+                (0, -1),               
+                (-1, 0),     
+                (-1, +1),  
+                (0, +1),               
+                (+1, +1),  
+                (+1, 0)    
             ]
-        else:  # even row - not shifted
+        else:  # even row
             neighbor_deltas = [
-                (0, -1),   # West
-                (-1, -1),  # Northwest
-                (-1, 0),   # Northeast
-                (0, +1),   # East  
-                (+1, 0),   # Southeast
-                (+1, -1)   # Southwest
+                (0, -1), 
+                (-1, -1),
+                (-1, 0),  
+                (0, +1),  
+                (+1, 0),  
+                (+1, -1) 
             ]
 
         result = []

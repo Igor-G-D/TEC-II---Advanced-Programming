@@ -1,5 +1,6 @@
 from classes import Robot, Goal, RectangleGrid, HexGrid
 from aStarSearch import AStarAlgorithm
+from dijkstra import DijkstraAlgorithm
 
 class AbstractFactory:
     def create_grid_factory(self): pass
@@ -24,6 +25,8 @@ class AlgorithmFactory:
     def create_algorithm(self, type_name):
         if type_name == "astar":
             return AStarAlgorithm()
+        if type_name == "dijkstra":
+            return DijkstraAlgorithm
         raise ValueError(f"Unknown algorithm type: {type_name}")
     
 class DefaultSimulationFactory(AbstractFactory):

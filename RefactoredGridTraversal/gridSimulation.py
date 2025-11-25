@@ -19,7 +19,7 @@ color_palette = sns.color_palette("husl", 20)
 bgr_palette = [(int(b * 255), int(g * 255), int(r * 255)) for r, g, b in color_palette]
 rgb_palette = [(int(r * 255), int(g * 255), int(b * 255)) for r, g, b in color_palette]
 
-cell_shape = 1 # 0 for rectangle, 1 for hex
+cell_shape = 0 # 0 for rectangle, 1 for hex
 
 # Create simulation instance
 factory = DefaultSimulationFactory()
@@ -60,7 +60,7 @@ euclidian_distance = []
 path_size = []
 
 def clearSimulation(clearData=False):
-    global simulation, astar_execution_time, euclidian_distance, path_size
+    global simulation, astar_execution_time, euclidian_distance, path_size, main_image, cell_shape
     print("cleared!")
     # Reset simulation
     factory = DefaultSimulationFactory()
@@ -74,6 +74,8 @@ def clearSimulation(clearData=False):
     astar_execution_time = []
     euclidian_distance = []
     path_size = []
+    
+    reset_window(main_image, simulation.robots, simulation.goals, simulation.paths)
     
 def main_mouse_callback(event, x, y, flags, param):
     global main_image, simulation
@@ -111,7 +113,8 @@ def main_mouse_callback(event, x, y, flags, param):
                 simulation.add_robot(cell_clicked)
         reset_window(main_image, simulation.robots, simulation.goals, simulation.paths)
     
-def which_cell_clicked(x, y, cell_shape=cell_shape):
+def which_cell_clicked(x, y):
+    global cell_shape
     if cell_shape == 0:  # Square grid
         cell_col = math.floor(x / cell_w)
         cell_row = math.floor(y / cell_h)
@@ -314,6 +317,12 @@ running = True
 initialized = False
 allow_diagonals = False
 pressed = False
+
+algorithms = ["astar", "dijkstra"]
+algorithm_index = 0
+cell_shape_names = ["rectangular", "hexagonal"]
+cell_shape_index = 0
+
 # Main loop
 while True:
     if running:
@@ -327,7 +336,6 @@ while True:
                 break
             elif key == 8:  # Backspace to clear
                 clearSimulation(True)
-                reset_window(main_image, simulation.robots, simulation.goals, simulation.paths)
             elif key == 13:  # Enter to calculate paths
                 astar_execution_time = []
                 print("Displaying calculated paths")
@@ -338,7 +346,7 @@ while True:
                         print(f"Calculating path for robot {i}")
                         t0 = time.perf_counter()
                         
-                        algorithm = simulation.algorithm_factory.create_algorithm("astar")
+                        algorithm = simulation.algorithm_factory.create_algorithm(algorithms[algorithm_index % len(algorithms)])
                         path = algorithm.find_path(simulation.grid, robot.position, goal.position, allow_diagonals)
                         
                         t1 = time.perf_counter()
@@ -351,11 +359,20 @@ while True:
                     reset_window(main_image, simulation.robots, simulation.goals, simulation.paths)
                 else:
                     print("Number of robots and goals must match!")
-                    
-            elif key == 9 and not pressed: #tab
+            elif key == 49 and not pressed: #tab
+                pressed = True
+                cell_shape_index += 1
+                cell_shape = cell_shape_index % len(cell_shape_names)
+                print(f"board cell shape switched to {cell_shape_names[cell_shape]}")
+                clearSimulation(True)
+            elif key == 50 and not pressed: #tab
                 pressed = True
                 allow_diagonals = not allow_diagonals
                 print(f"Diagonal Movement = {allow_diagonals}")
+            elif key == 51 and not pressed:
+                algorithm_index += 1
+                print(f"changed pathfinding algorithm to: {algorithms[algorithm_index % len(algorithms)]}")
+            
         else:
             if key == 255:
                 pressed = False
