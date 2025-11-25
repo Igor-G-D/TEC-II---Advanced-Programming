@@ -20,6 +20,7 @@ bgr_palette = [(int(b * 255), int(g * 255), int(r * 255)) for r, g, b in color_p
 rgb_palette = [(int(r * 255), int(g * 255), int(b * 255)) for r, g, b in color_palette]
 
 cell_shape = 0 # 0 for rectangle, 1 for hex
+run_pathfinding = False
 
 # Create simulation instance
 factory = DefaultSimulationFactory()
@@ -53,6 +54,12 @@ hex_h_full = 2 * hex_r
 
 cell_h = img_h / rows
 cell_w = img_w / cols 
+
+algorithms = ["astar", "dijkstra"]
+algorithm_index = 0
+cell_shape_names = ["rectangular", "hexagonal"]
+cell_shape_index = 0
+
 
 # logs
 astar_execution_time = []
@@ -109,8 +116,8 @@ def main_mouse_callback(event, x, y, flags, param):
                 print(f"set goal for robot {len(simulation.goals)} at {cell_clicked}")
                 simulation.add_goal(cell_clicked, simulation.robots[-1]) 
             else:
-                print(f"robot {len(simulation.robots)} created at {cell_clicked}")
-                simulation.add_robot(cell_clicked)
+                print(f"robot {len(simulation.robots)} created at {cell_clicked} with pathfinding algorithm {algorithms[algorithm_index % len(algorithms)]}")
+                simulation.add_robot(cell_clicked, algorithms[algorithm_index % len(algorithms)])
         reset_window(main_image, simulation.robots, simulation.goals, simulation.paths)
     
 def which_cell_clicked(x, y):
@@ -318,11 +325,6 @@ initialized = False
 allow_diagonals = False
 pressed = False
 
-algorithms = ["astar", "dijkstra"]
-algorithm_index = 0
-cell_shape_names = ["rectangular", "hexagonal"]
-cell_shape_index = 0
-
 # Main loop
 while True:
     if running:
@@ -346,7 +348,7 @@ while True:
                         print(f"Calculating path for robot {i}")
                         t0 = time.perf_counter()
                         
-                        algorithm = simulation.algorithm_factory.create_algorithm(algorithms[algorithm_index % len(algorithms)])
+                        algorithm = simulation.algorithm_factory.create_algorithm(robot.get_pathfinding_algorithm_type())
                         path = algorithm.find_path(simulation.grid, robot.position, goal.position)
                         
                         t1 = time.perf_counter()

@@ -13,9 +13,17 @@ class Simulation:
         self.goals = []
         self.paths = []
 
-    def add_robot(self, position: Tuple[int, int]) -> None:
-        robot = self.object_factory.create_robot(position)
-        self.robots.append(robot)
+    def add_robot(self, position: Tuple[int, int], algorithm_type: str) -> None:
+        base_robot = self.object_factory.create_robot(position)
+        
+        if algorithm_type == "astar":
+            decorated_robot = AStarRobot(base_robot)
+        elif algorithm_type == "dijkstra":
+            decorated_robot = DijkstraRobot(base_robot)
+        else:
+            decorated_robot = base_robot 
+        
+        self.robots.append(decorated_robot)
 
     def add_goal(self, position: Tuple[int, int], robot) -> None:
         goal = self.object_factory.create_goal(position)
@@ -23,10 +31,19 @@ class Simulation:
         robot.goal = goal
 
     def run(self, allow_diagonals: bool) -> None:
-        for robot, goal in zip(self.robots, self.goals):
-            algorithm = self.algorithm_factory.create_algorithm("astar")
-            path = algorithm.find_path(self.grid, robot.position, goal.position, allow_diagonals)
-            self.paths.append(path)
+            # Clear previous paths
+            self.paths = [] 
+            
+            for robot in self.robots:
+                if robot.goal is None:
+                    continue
+
+                algorithm_type = robot.get_pathfinding_algorithm_type()
+                
+                algorithm = self.algorithm_factory.create_algorithm(algorithm_type)
+                
+                path = algorithm.find_path(self.grid, robot.position, robot.goal.position)
+                self.paths.append(path)
 
 class Object:
     def __init__(self, position: Tuple[int, int], color: Tuple[int, int, int] = (0, 0, 0)):
@@ -34,9 +51,41 @@ class Object:
         self.color = color
 
 class Robot(Object):
-    def __init__(self, position: Tuple[int, int], color: Tuple[int, int, int], goal = None):
+    def __init__(self, position: Tuple[int, int], color: Tuple[int, int, int] = (0, 0, 0), goal=None):
         super().__init__(position, color)
         self.goal = goal
+        self.algorithm_type = "astar"
+        
+    def get_pathfinding_algorithm_type(self) -> str:
+        return self.algorithm_type
+
+class RobotDecorator:
+    def __init__(self, decorated_robot: Robot):
+        self._robot = decorated_robot
+        
+    @property
+    def position(self): return self._robot.position
+
+    @property
+    def color(self): return self._robot.color
+
+    @property
+    def goal(self): return self._robot.goal
+    
+    @goal.setter
+    def goal(self, value): self._robot.goal = value
+
+    def get_pathfinding_algorithm_type(self) -> str:
+        return self._robot.get_pathfinding_algorithm_type()
+
+
+class AStarRobot(RobotDecorator):
+    def get_pathfinding_algorithm_type(self) -> str:
+        return "astar"
+
+class DijkstraRobot(RobotDecorator):
+    def get_pathfinding_algorithm_type(self) -> str:
+        return "dijkstra"
 
 class Goal(Object):
     def __init__(self, position: Tuple[int, int]):
