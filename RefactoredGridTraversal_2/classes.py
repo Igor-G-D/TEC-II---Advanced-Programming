@@ -3,6 +3,37 @@ import math
 from typing import Tuple, List
 from interfaces import Grid
 from abc import ABCMeta, ABC, abstractmethod
+from enum import Enum
+
+class EventType(Enum):
+    MOVEMENT = "movement"
+    ARRIVAL = "arrival"
+
+class Event:
+    def __init__(self, event_type: EventType, source, data=None):
+        self.event_type = event_type
+        self.source = source
+        self.data = data or {}
+
+class EventManager:
+    def __init__(self):
+        self.listeners = {}
+        
+    def subscribe(self, event_type: EventType, listener):
+        if event_type not in self.listeners:
+            self.listeners[event_type] = []
+        self.listeners[event_type].append(listener)
+        
+    def unsubscribe(self, event_type: EventType, listener):
+        if event_type in self.listeners:
+            if listener in self.listeners[event_type]:
+                self.listeners[event_type].remove(listener)
+                
+    def notify(self, event: Event):
+        event_type = event.event_type
+        if event_type in self.listeners:
+            for listener in self.listeners[event_type]:
+                listener.on_event(event)
 
 class Simulation:
     def __init__(self, grid_factory, object_factory, algorithm_factory, grid_shape=0, cell_shape=0, allow_diagonals: bool = False):
@@ -12,6 +43,10 @@ class Simulation:
         self.robots = []
         self.goals = []
         self.command_history = CommandHistory()
+        self.event_manager = EventManager()
+        
+        # Track robot positions for collision detection
+        self.robot_positions = {}
 
     def add_robot(self, position: Tuple[int, int], algorithm_type: str) -> None:
         base_robot = self.object_factory.create_robot(position)
@@ -24,12 +59,18 @@ class Simulation:
             decorated_robot = base_robot 
         
         self.robots.append(decorated_robot)
+        # subscribe robot to movement events
+        self.event_manager.subscribe(EventType.MOVEMENT, decorated_robot)
+        #update position tracking
+        self.robot_positions[decorated_robot] = position
 
     def add_goal(self, position: Tuple[int, int], robot) -> None:
         goal = self.object_factory.create_goal(position)
         self.goals.append(goal)
         robot.goal = goal
-        
+        #subscribe goal to arrival events
+        self.event_manager.subscribe(EventType.ARRIVAL, goal)
+
     def get_paths(self) -> List[List[Tuple[int, int]]]:
         paths = []
         for robot in self.robots:
@@ -42,14 +83,46 @@ class Simulation:
             
     def step_robots(self):
         for robot in self.robots:
+            old_position = self.robot_positions[robot]
             robot.step()
+            new_position = robot.get_curr_pos()
+            
+            #Update position tracking
+            self.robot_positions[robot] = new_position
+            
+            # Notify movement event
+            self.event_manager.notify(Event(
+                EventType.MOVEMENT,
+                robot,
+                {"old_position": old_position, "new_position": new_position}
+            ))
+            
+            # Check for arrival at goal
+            if robot.goal and new_position == robot.goal.position:
+                self.event_manager.notify(Event(
+                    EventType.ARRIVAL,
+                    robot,
+                    {"goal": robot.goal,"old_position": old_position, "new_position": new_position}
+                ))
             
     def step_back_robots(self):
         for robot in self.robots:
+            old_position = self.robot_positions[robot]
             robot.step_back()
+            new_position = robot.get_curr_pos()
+            
+            # Update position tracking
+            self.robot_positions[robot] = new_position
+            
+            # Notify movement event (for undo)
+            self.event_manager.notify(Event(
+                EventType.MOVEMENT,
+                robot,
+                {"old_position": old_position, "new_position": new_position}
+            ))
     
     def run_command(self, command):
-        if (self.scenario_ready()): 
+        if self.scenario_ready(): 
             command.execute()
             self.command_history.register_command(command)
         
@@ -74,8 +147,11 @@ class Simulation:
             path = algorithm.find_path(self.grid, robot.position, robot.goal.position)
             robot.set_path(path)
             
-            self.command_history.clear_history()
+            # Initialize robot position tracking
+            self.robot_positions[robot] = robot.position
             
+        self.command_history.clear_history()
+
     def scenario_ready(self): # checks to see if everything is calculated and that the pathfinding algorithms were run
         ready = True
         
@@ -98,6 +174,10 @@ class Object(ABC):
     def __init__(self, position: Tuple[int, int], color: Tuple[int, int, int] = (0, 0, 0)):
         self.position = position
         self.color = color
+        
+    @abstractmethod
+    def on_event(self, event: Event):
+        pass
 
 class Robot(Object):
     def __init__(self, position: Tuple[int, int], color: Tuple[int, int, int] = (0, 0, 0), goal=None):
@@ -123,20 +203,36 @@ class Robot(Object):
     def step_back(self):
         self.path_step -= 1
     
-    def get_curr_pos(self) -> Tuple[int, int]:
+    def get_curr_pos(self, offset = 0) -> Tuple[int, int]:
+        
         if self.path == None:
             return self.position
-        if self.path_step < 0:
+        
+        idx = self.path_step + offset
+        if idx < 0:
             return self.path[0]
-        elif self.path_step < len(self.path):
-            return self.path[self.path_step]
+        elif idx < len(self.path):
+            return self.path[idx]
         return self.path[-1]
         
+    def on_event(self, event: Event):
+        if event.event_type == EventType.MOVEMENT:
+            # Check for collisions with other robots
+            if event.source.undecorated != self and (self.get_curr_pos(-1) != self.get_curr_pos() and event.data["old_position"] != event.data["new_position"]):
+                # Don't check collision with self, and if both haven't moved last "step"
+                my_position = self.get_curr_pos()
+                other_position = event.data["new_position"]
+                if my_position == other_position:
+                    print(f"COLLISION: Robot {self} at {my_position} collided with robot {event.source.undecorated}!")
 
-class RobotDecorator:
+class RobotDecorator(Robot):
     def __init__(self, decorated_robot: Robot):
         self._robot = decorated_robot
         
+    @property
+    def undecorated(self):
+        return self._robot    
+    
     @property
     def position(self): return self._robot.position
 
@@ -170,9 +266,11 @@ class RobotDecorator:
     def step_back(self):
         return self._robot.step_back()
     
-    def get_curr_pos(self):
-        return self._robot.get_curr_pos()
-
+    def get_curr_pos(self, offset=0):
+        return self._robot.get_curr_pos(offset)
+        
+    def on_event(self, event: Event):
+        return self._robot.on_event(event)
 
 class AStarRobot(RobotDecorator):
     def get_pathfinding_algorithm_type(self) -> str:
@@ -185,6 +283,11 @@ class DijkstraRobot(RobotDecorator):
 class Goal(Object):
     def __init__(self, position: Tuple[int, int]):
         super().__init__(position)
+        
+    def on_event(self, event: Event):
+        if event.event_type == EventType.ARRIVAL:
+            if event.data["goal"] == self and event.data["old_position"] != event.data["new_position"]: # prevent multiple arrivals if the robot isn't moving
+                print(f"ARRIVAL: Robot {self} arrived at goal at position {self.position}!")
 
 class SingletonGridMeta(ABCMeta):  # Inherit from ABCMeta
     _instances = {}
@@ -313,4 +416,3 @@ class CommandHistory:
         self.history.append(command)
     def clear_history(self):
         self.history = []
-        
