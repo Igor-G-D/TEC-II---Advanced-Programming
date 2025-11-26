@@ -35,6 +35,41 @@ class EventManager:
             for listener in self.listeners[event_type]:
                 listener.on_event(event)
 
+class ValidationHandler(ABC):
+    def __init__(self):
+        self._next_handler = None
+
+    def set_next(self, handler):
+        self._next_handler = handler
+        return handler
+
+    @abstractmethod
+    def handle(self, simulation) -> Tuple[bool, str]:
+        if self._next_handler:
+            return self._next_handler.handle(simulation)
+        return True, ""  
+    
+
+class RobotExistsHandler(ValidationHandler):
+    def handle(self, simulation) -> Tuple[bool, str]:
+        if len(simulation.robots) == 0:
+            return False, "No robots have been created yet!"
+        return super().handle(simulation)
+
+class RobotGoalHandler(ValidationHandler):
+    def handle(self, simulation) -> Tuple[bool, str]:
+        for i, robot in enumerate(simulation.robots):
+            if robot.goal is None:
+                return False, f"Robot {i} doesn't have a goal!"
+        return super().handle(simulation)
+
+class RobotPathHandler(ValidationHandler):
+    def handle(self, simulation) -> Tuple[bool, str]:
+        for i, robot in enumerate(simulation.robots):
+            if robot.path is None:
+                return False, f"Robot {i} doesn't have a path!"
+        return super().handle(simulation)
+
 class Simulation:
     def __init__(self, grid_factory, object_factory, algorithm_factory, grid_shape=0, cell_shape=0, allow_diagonals: bool = False):
         self.grid = grid_factory.create_grid(grid_shape, cell_shape, allow_diagonals)
@@ -44,10 +79,23 @@ class Simulation:
         self.goals = []
         self.command_history = CommandHistory()
         self.event_manager = EventManager()
+        self.validation_chain = self._build_validation_chain()
         
         # Track robot positions for collision detection
         self.robot_positions = {}
 
+
+    def _build_validation_chain(self):
+            chain = RobotExistsHandler()
+            chain.set_next(RobotGoalHandler()).set_next(RobotPathHandler())
+            return chain
+        
+    def scenario_ready(self):  # checks to see if everything is calculated and that the pathfinding algorithms were run
+        return self.validation_chain.handle(self)[0]
+    
+    def get_validation_details(self):
+        return self.validation_chain.handle(self)
+    
     def add_robot(self, position: Tuple[int, int], algorithm_type: str) -> None:
         base_robot = self.object_factory.create_robot(position)
         
@@ -125,6 +173,9 @@ class Simulation:
         if self.scenario_ready(): 
             command.execute()
             self.command_history.register_command(command)
+        else:
+            success, message = self.get_validation_details()
+            print(f"Cannot execute command: {message}")
         
     def undo(self):
         try:
@@ -151,24 +202,6 @@ class Simulation:
             self.robot_positions[robot] = robot.position
             
         self.command_history.clear_history()
-
-    def scenario_ready(self): # checks to see if everything is calculated and that the pathfinding algorithms were run
-        ready = True
-        
-        if len(self.robots) == 0:
-            print("No robots have been created yet!")
-            return False
-        
-        for i, robot in enumerate(self.robots):
-            if robot.goal == None:
-                print(f"robot {i} doesn't have a goal!")
-                ready = False
-            if robot.path == None:
-                print(f"robot {i} doesn't have a path!")
-                ready = False
-            if not ready:
-                continue
-        return ready
 
 class Object(ABC):
     def __init__(self, position: Tuple[int, int], color: Tuple[int, int, int] = (0, 0, 0)):

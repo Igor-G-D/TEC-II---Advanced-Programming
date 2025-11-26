@@ -344,7 +344,7 @@ while True:
                 clearSimulation(True)
             elif key == 13:  # Enter to calculate paths
                 astar_execution_time = []
-                print("Displaying calculated paths")
+                print("Attempting to calculate paths")
                 simulation.clear_paths()  # Clear existing paths
                 
                 if len(simulation.robots) == len(simulation.goals): 
