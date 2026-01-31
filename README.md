@@ -9,4 +9,5 @@
 | Trabalho 7 | 25/11/2025 15:18 | [Ver no Git](https://github.com/Igor-G-D/TEC-II---Advanced-Programming/tree/main/RefactoredGridTraversal) | ✅ Sim |
 | Trabalho 8 | 26/11/2025 17:06 | [Ver no Git](https://github.com/Igor-G-D/TEC-II---Advanced-Programming/tree/main/RefactoredGridTraversal_2) | ✅ Sim |
 | Trabalho 9 | 14/12/2025 13:52 | [Ver no Git](https://github.com/Igor-G-D/TEC-II---Advanced-Programming/tree/main/CollisionDetection) | ✅ Sim |
+| Trabalho 10 | 31/01/2026 19:41 | [Ver no Git](https://github.com/Igor-G-D/TEC-II---Advanced-Programming/tree/main/CollisionAvoidance) | ❌ Não |
 Note: Os vídeos estão listados no README.md dentro das pastas dos trabalhos
