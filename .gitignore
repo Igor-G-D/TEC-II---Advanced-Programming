@@ -6,3 +6,4 @@ ConvexHull/convexhull_analysis_*
 */simulation_analysis_*
 
 MinkowskiAddition/__pycache__/convexhull.cpython-312.pyc
+CollisionAvoidance/performance_analysis*
