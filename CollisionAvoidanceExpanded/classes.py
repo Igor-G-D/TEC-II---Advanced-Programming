@@ -132,6 +132,8 @@ class Simulation:
             decorated_robot = NoCommunicationAvoidanceRobot(decorated_robot, self)
         elif avoidance_method == "direct_communication":
             decorated_robot = DirectCommunicationAvoidanceRobot(decorated_robot, self)
+        elif avoidance_method == "indirect_communication":
+            decorated_robot = IndirectCommunicationAvoidanceRobot(decorated_robot, self)
         
         self.robots.append(decorated_robot)
         self.event_manager.subscribe(EventType.MOVEMENT, decorated_robot)
@@ -413,16 +415,16 @@ class NoCommunicationAvoidanceRobot(RobotDecoratorAvoidance):
 
     def step(self):
         old_position = self.get_curr_pos()
-        next_position = self.get_curr_pos(offset=1)
+        next_pos = self.get_curr_pos(offset=1)
         
-        if next_position == old_position:
+        if next_pos == old_position:
             self._robot.step()
             self.consecutive_waits = 0
             return
 
         start_time = time.perf_counter()
         
-        is_safe = self.simulation.is_position_safe(self, next_position)
+        is_safe = self.simulation.is_position_safe(self, next_pos)
         
         if is_safe:
             self.overhead.append(time.perf_counter() - start_time)
@@ -433,9 +435,10 @@ class NoCommunicationAvoidanceRobot(RobotDecoratorAvoidance):
                 self.movement_history.append(True)
         else:
             self.consecutive_waits += 1
+            print(f"NO COMMUNICATION: Robot {self.id} blocked at {next_pos}. Wait count: {self.consecutive_waits}")
             
             if self.consecutive_waits >= 3:
-                print(f"DEADLOCK DETECTED: Robot {self.id} stuck. Attempting escape...")
+                print(f"DEADLOCK (NO COMMUNICATION): Robot {self.id} stuck. Attempting escape...")
                 
                 escaped = self._attempt_escape_and_replan()
                 
@@ -448,7 +451,7 @@ class NoCommunicationAvoidanceRobot(RobotDecoratorAvoidance):
             else:
                 self.overhead.append(time.perf_counter() - start_time)
             
-            print(f"AVOIDANCE: Robot {self.id} waiting at {old_position}")
+            print(f"NO COMMUNICATION: Robot {self.id} waiting at {old_position}")
             self.movement_history.append(False)
     
 class DirectCommunicationAvoidanceRobot(RobotDecoratorAvoidance):
@@ -473,7 +476,7 @@ class DirectCommunicationAvoidanceRobot(RobotDecoratorAvoidance):
             # outro robo quer ir para a posição que desejo ocupar
             if target_pos == my_current_pos or target_pos == my_next_pos:
                 if self.is_at_goal():
-                    print(f"DIRECT: Robot {self.id} at goal. Blocking {event.source.id}.")
+                    print(f"DIRECT: Robot {self.id} at goal. Blocking robot {event.source.id}.")
                     self.simulation.event_manager.notify(Event(
                         EventType.GOAL_REACHED_BLOCK, 
                         self, 
@@ -488,7 +491,7 @@ class DirectCommunicationAvoidanceRobot(RobotDecoratorAvoidance):
 
         if event.event_type == EventType.GOAL_REACHED_BLOCK:
             if event.data.get("blocked_robot_id") == self.id:
-                print(f"DIRECT: Robot {self.id} blocked by finished robot. Replanning...")
+                print(f"DIRECT: Robot {self.id} blocked by finished robot, replanning route")
                 self._attempt_escape_and_replan()
 
     def step(self):
@@ -511,12 +514,62 @@ class DirectCommunicationAvoidanceRobot(RobotDecoratorAvoidance):
             if self.simulation.is_position_safe(self, next_pos):
                 self._robot.step()
             else:
-                print(f"DIRECT: Robot {self.id} has priority but {next_pos} is occupied. Waiting...")
+                print(f"DIRECT: Robot {self.id} has priority but {next_pos} is occupied, waiting for the way to be clear")
                 self.movement_history.append(False)
         else:
-            print(f"DIRECT: Robot {self.id} yielding (waiting for peer)")
+            print(f"DIRECT: Robot {self.id} waiting for other robot to clear the way")
             self.movement_history.append(False)
+            
+class IndirectCommunicationAvoidanceRobot(RobotDecoratorAvoidance):
+    def __init__(self, decorated_robot: Robot, simulation: Simulation):
+        super().__init__(decorated_robot)
+        self.simulation = simulation
+        self.reservation_map = {} 
+        self.consecutive_waits = 0
+        self.simulation.event_manager.subscribe(EventType.RESERVATION, self)
 
+    def on_event(self, event: Event):
+        if event.event_type == EventType.RESERVATION:
+            reserver_id = event.source.id
+            if reserver_id != self.id:
+                reserved_pos = event.data.get("position")
+                self.reservation_map[reserved_pos] = reserver_id
+
+    def step(self):
+        next_pos = self.get_curr_pos(offset=1)
+        
+        if not next_pos or next_pos == self.get_curr_pos():
+            self._robot.step()
+            self.consecutive_waits = 0 # reset if arrived at goal
+            return
+
+        # check map
+        is_reserved = next_pos in self.reservation_map and self.reservation_map[next_pos] != self.id
+        
+        if not is_reserved and self.simulation.is_position_safe(self, next_pos):
+            # leave reserved marker for others
+            self.simulation.event_manager.notify(Event(
+                EventType.RESERVATION, 
+                self, 
+                {"position": next_pos}
+            ))
+            self._robot.step()
+            self.consecutive_waits = 0 
+        else:
+            self.consecutive_waits += 1
+            print(f"INDIRECT: Robot {self.id} blocked at {next_pos}. Wait count: {self.consecutive_waits}")
+            
+            # check for deadlock, and if so, replan route
+            if self.consecutive_waits >= 3:
+                print(f"DEADLOCK (INDIRECT): Robot {self.id} stuck for 3 turns. Replanning route")
+                if self._attempt_escape_and_replan():
+                    self.consecutive_waits = 0
+            
+            self.movement_history.append(False)
+            
+            # ckear up old reservations for next step
+            self.reservation_map.clear()
+            
 class SingletonGridMeta(ABCMeta): 
     _instances = {}
     

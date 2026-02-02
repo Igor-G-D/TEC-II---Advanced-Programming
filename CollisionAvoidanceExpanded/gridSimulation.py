@@ -58,8 +58,8 @@ algorithms = ["astar", "dijkstra"]
 algorithm_index = 0
 cell_shape_names = ["rectangular", "hexagonal"]
 cell_shape_index = 0
-avoidance_methods = ["no_communication", "direct_communication"]
-avoidance_method_index = 1
+avoidance_methods = ["no_communication", "direct_communication", "indirect_communication"]
+avoidance_method_index = 2
 
 # logs
 path_size = []
@@ -366,6 +366,9 @@ while True:
             elif key == 51 and not pressed: #3
                 algorithm_index += 1
                 print(f"changed pathfinding algorithm to: {algorithms[algorithm_index % len(algorithms)]}")
+            elif key == 52 and not pressed: #4
+                avoidance_method_index += 1
+                print(f"changed avoidance method to: {avoidance_methods[avoidance_method_index % len(avoidance_methods)]}")
             elif key == 81: # <
                 command = StepBackCommand(simulation)
                 simulation.run_command(command)
