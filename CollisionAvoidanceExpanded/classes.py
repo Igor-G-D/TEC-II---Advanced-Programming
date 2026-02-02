@@ -473,7 +473,7 @@ class DirectCommunicationAvoidanceRobot(RobotDecoratorAvoidance):
             my_current_pos = self.get_curr_pos()
             my_next_pos = self.get_curr_pos(offset=1)
             
-            # outro robo quer ir para a posição que desejo ocupar
+            # another robot wants to occupy the space I want to go in
             if target_pos == my_current_pos or target_pos == my_next_pos:
                 if self.is_at_goal():
                     print(f"DIRECT: Robot {self.id} at goal. Blocking robot {event.source.id}.")
@@ -482,11 +482,11 @@ class DirectCommunicationAvoidanceRobot(RobotDecoratorAvoidance):
                         self, 
                         {"blocked_robot_id": event.source.id}
                     ))
-                # se não tenho prioridade, espero
+                # if I don't have prority, wait
                 elif self.id < event.source.id:
                     self.waiting_for_peer = True
                 else:
-                    # se tenho prioridade, não espero
+                    # if I have priority, don't want
                     self.waiting_for_peer = False
 
         if event.event_type == EventType.GOAL_REACHED_BLOCK:
@@ -502,14 +502,14 @@ class DirectCommunicationAvoidanceRobot(RobotDecoratorAvoidance):
             self._robot.step()
             return
 
-        # notificar a intenção de se mover de verificar a segurança
+        # notify the intention to move before verifying safety of next square
         self.simulation.event_manager.notify(Event(
             EventType.NEGOTIATION, 
             self, 
             {"target_pos": next_pos}
         ))
 
-        # decidir movimento baseado na negociação e segurança física
+        # decide movement based on negotiation and safety of next square
         if not self.waiting_for_peer:
             if self.simulation.is_position_safe(self, next_pos):
                 self._robot.step()
