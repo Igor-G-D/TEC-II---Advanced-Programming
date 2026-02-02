@@ -1,6 +1,7 @@
 import numpy as np
 import math
 import time
+import copy
 from typing import Tuple, List
 from interfaces import Grid
 from abc import ABCMeta, ABC, abstractmethod
@@ -388,22 +389,33 @@ class RobotDecoratorAvoidance(RobotDecorator):
     def overhead(self): 
         return self._overhead_history 
     
-    def _attempt_escape_and_replan(self) -> bool:
+    def _attempt_escape_and_replan(self, blocked_square) -> bool:
         current_pos = self.get_curr_pos()
-        neighbors = self.simulation.grid.get_neighbors(current_pos)
+        grid = self.simulation.grid
+        
+        # Get all squares currently occupied by other robots
+        dynamic_obstacles = [blocked_square]
+
+        neighbors = grid.get_neighbors(current_pos)
         np.random.shuffle(neighbors)
         
         for neighbor in neighbors:
-            if not self.simulation.grid.is_obstacle(neighbor) and self.simulation.is_position_safe(self, neighbor):
+            # safety check
+            if not grid.is_obstacle(neighbor) and self.simulation.is_position_safe(self, neighbor):
                 
-                algorithm_type = self.get_pathfinding_algorithm_type()
-                algorithm = self.simulation.algorithm_factory.create_algorithm(algorithm_type)
+                avoidance_grid = DynamicObstacleGrid(grid, dynamic_obstacles)
                 
-                new_path = algorithm.find_path(self.simulation.grid, neighbor, self.goal.position)
+                algorithm = self.simulation.algorithm_factory.create_algorithm(
+                    self.get_pathfinding_algorithm_type()
+                )
+                
+                new_path = algorithm.find_path(avoidance_grid, neighbor, self.goal.position)
                 
                 if new_path:
                     self.set_path(new_path)
-                    self.movement_history.append(True)
+                    self.simulation.event_manager.notify(Event(
+                        EventType.RESERVATION, self, {"position": neighbor}
+                    ))
                     return True
         return False
         
@@ -440,7 +452,7 @@ class NoCommunicationAvoidanceRobot(RobotDecoratorAvoidance):
             if self.consecutive_waits >= 3:
                 print(f"DEADLOCK (NO COMMUNICATION): Robot {self.id} stuck. Attempting escape...")
                 
-                escaped = self._attempt_escape_and_replan()
+                escaped = self._attempt_escape_and_replan(next_pos)
                 
                 # end timing after escape attempt (successful or failed)
                 self.overhead.append(time.perf_counter() - start_time)
@@ -470,11 +482,11 @@ class DirectCommunicationAvoidanceRobot(RobotDecoratorAvoidance):
         
         if event.event_type == EventType.NEGOTIATION:
             target_pos = event.data.get("target_pos")
-            my_current_pos = self.get_curr_pos()
-            my_next_pos = self.get_curr_pos(offset=1)
+            curr_pos = self.get_curr_pos()
+            next_pos = self.get_curr_pos(offset=1)
             
             # another robot wants to occupy the space I want to go in
-            if target_pos == my_current_pos or target_pos == my_next_pos:
+            if target_pos == curr_pos or target_pos == next_pos:
                 if self.is_at_goal():
                     print(f"DIRECT: Robot {self.id} at goal. Blocking robot {event.source.id}.")
                     self.simulation.event_manager.notify(Event(
@@ -486,13 +498,13 @@ class DirectCommunicationAvoidanceRobot(RobotDecoratorAvoidance):
                 elif self.id < event.source.id:
                     self.waiting_for_peer = True
                 else:
-                    # if I have priority, don't want
+                    # if I have priority, don't wait
                     self.waiting_for_peer = False
 
         if event.event_type == EventType.GOAL_REACHED_BLOCK:
             if event.data.get("blocked_robot_id") == self.id:
                 print(f"DIRECT: Robot {self.id} blocked by finished robot, replanning route")
-                self._attempt_escape_and_replan()
+                self._attempt_escape_and_replan(next_pos)
 
     def step(self):
         self.waiting_for_peer = False
@@ -562,7 +574,7 @@ class IndirectCommunicationAvoidanceRobot(RobotDecoratorAvoidance):
             # check for deadlock, and if so, replan route
             if self.consecutive_waits >= 3:
                 print(f"DEADLOCK (INDIRECT): Robot {self.id} stuck for 3 turns. Replanning route")
-                if self._attempt_escape_and_replan():
+                if self._attempt_escape_and_replan(next_pos):
                     # if there is a replan, reserve the next spot immediately
                     new_escape_pos = self.get_curr_pos(offset=1)
                     if new_escape_pos:
@@ -691,6 +703,17 @@ class HexGrid(Grid, metaclass=SingletonGridMeta):
         x2, y2, z2 = self.offset_to_cube(b)
         
         return (abs(x1 - x2) + abs(y1 - y2) + abs(z1 - z2)) / 2.0
+
+class DynamicObstacleGrid: # wrapper that lets obstacles be added dynamically
+    def __init__(self, original_grid, blocked_positions):
+        self._grid = original_grid
+        self._blocked = set(blocked_positions)
+
+    def is_obstacle(self, position: Tuple[int, int]) -> bool:
+        return self._grid.is_obstacle(position) or position in self._blocked
+
+    def __getattr__(self, name): # everything else is from the base class
+        return getattr(self._grid, name)
 
 class Command(ABC):
     def __init__(self, simulation: Simulation):
