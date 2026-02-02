@@ -563,6 +563,15 @@ class IndirectCommunicationAvoidanceRobot(RobotDecoratorAvoidance):
             if self.consecutive_waits >= 3:
                 print(f"DEADLOCK (INDIRECT): Robot {self.id} stuck for 3 turns. Replanning route")
                 if self._attempt_escape_and_replan():
+                    # if there is a replan, reserve the next spot immediately
+                    new_escape_pos = self.get_curr_pos(offset=1)
+                    if new_escape_pos:
+                        self.simulation.event_manager.notify(Event(
+                            EventType.RESERVATION, 
+                            self, 
+                            {"position": new_escape_pos}
+                        ))
+                    
                     self.consecutive_waits = 0
             
             self.movement_history.append(False)
