@@ -476,6 +476,7 @@ class DirectCommunicationAvoidanceRobot(RobotDecoratorAvoidance):
         super().__init__(decorated_robot)
         self.simulation = simulation
         self.waiting_for_peer = False
+        self.consecutive_waits = 0
         self.simulation.event_manager.subscribe(EventType.NEGOTIATION, self)
         self.simulation.event_manager.subscribe(EventType.GOAL_REACHED_BLOCK, self)
 
@@ -509,7 +510,8 @@ class DirectCommunicationAvoidanceRobot(RobotDecoratorAvoidance):
         if event.event_type == EventType.GOAL_REACHED_BLOCK:
             if event.data.get("blocked_robot_id") == self.id:
                 print(f"DIRECT: Robot {self.id} blocked by finished robot, replanning route")
-                self._attempt_escape_and_replan(next_pos)
+                if self._attempt_escape_and_replan(next_pos):
+                    self.consecutive_waits = 0
 
     def step(self):
         self.waiting_for_peer = False
@@ -517,7 +519,10 @@ class DirectCommunicationAvoidanceRobot(RobotDecoratorAvoidance):
         next_pos = self.get_curr_pos(offset=1)
         if not next_pos or next_pos == self.get_curr_pos():
             self._robot.step()
+            self.consecutive_waits = 0
             return
+
+        start_time = time.perf_counter()
 
         # notify the intention to move before verifying safety of next square
         self.simulation.event_manager.notify(Event(
@@ -529,13 +534,26 @@ class DirectCommunicationAvoidanceRobot(RobotDecoratorAvoidance):
         # decide movement based on negotiation and safety of next square
         if not self.waiting_for_peer:
             if self.simulation.is_position_safe(self, next_pos):
+                self.overhead.append(time.perf_counter() - start_time)
                 self._robot.step()
+                self.consecutive_waits = 0
             else:
+                self.overhead.append(time.perf_counter() - start_time)
                 print(f"DIRECT: Robot {self.id} has priority but {next_pos} is occupied, waiting for the way to be clear")
+                self.consecutive_waits += 1
                 self.movement_history.append(False)
         else:
             print(f"DIRECT: Robot {self.id} waiting for other robot to clear the way")
-            self.movement_history.append(False)
+            self.consecutive_waits += 1
+            
+        if self.consecutive_waits >= 3:
+            print(f"DEADLOCK (DIRECT): Robot {self.id} stuck for 3 turns. Replanning...")
+            if self._attempt_escape_and_replan(next_pos):
+                self.consecutive_waits = 0
+                self.overhead.append(time.perf_counter() - start_time)
+                return
+        self.overhead.append(time.perf_counter() - start_time)
+        self.movement_history.append(False)
             
 class IndirectCommunicationAvoidanceRobot(RobotDecoratorAvoidance):
     def __init__(self, decorated_robot: Robot, simulation: Simulation):
@@ -560,6 +578,8 @@ class IndirectCommunicationAvoidanceRobot(RobotDecoratorAvoidance):
             self.consecutive_waits = 0 # reset if arrived at goal
             return
 
+        start_time = time.perf_counter()
+
         # check map
         is_reserved = next_pos in self.reservation_map and self.reservation_map[next_pos] != self.id
         
@@ -570,6 +590,7 @@ class IndirectCommunicationAvoidanceRobot(RobotDecoratorAvoidance):
                 self, 
                 {"position": next_pos}
             ))
+            self.overhead.append(time.perf_counter() - start_time)
             self._robot.step()
             self.consecutive_waits = 0 
         else:
@@ -590,6 +611,8 @@ class IndirectCommunicationAvoidanceRobot(RobotDecoratorAvoidance):
                         ))
                     
                     self.consecutive_waits = 0
+                    
+            self.overhead.append(time.perf_counter() - start_time)
             
             self.movement_history.append(False)
             
