@@ -8,7 +8,6 @@ from datetime import datetime
 from matplotlib import ticker
 
 def find_latest_simulation_folder():
-    """Finds the most recent simulation data folder."""
     folders = [f for f in os.listdir('.') if f.startswith('simulation_data_') and os.path.isdir(f)]
     if not folders:
         return None
@@ -38,9 +37,9 @@ def create_graphs(folder_path=None):
 
     sns.set_theme(style="whitegrid")
     fig = plt.figure(figsize=(18, 16))
-    fig.suptitle(f'Robot Performance & Movement Analysis\n{folder_path}', fontsize=22, fontweight='bold')
+    fig.suptitle(f'Robot Performance & Movement Analysis\n{folder_path}', fontsize=16, fontweight='bold')
 
-    gs = fig.add_gridspec(3, 1, height_ratios=[1.2, 1, 1])
+    gs = fig.add_gridspec(3, 1, height_ratios=[1, 1.2, 1.2])
 
     # fnal image exported
     ax1 = fig.add_subplot(gs[0, 0])
@@ -79,25 +78,22 @@ def create_graphs(folder_path=None):
             alpha = 1.0 if moved else 0.8 
             
             ax3.hlines(y=i, xmin=step, xmax=step+1, 
-                        color=color, linewidth=22, alpha=alpha)
+                        color=color, linewidth=8, alpha=alpha)
             
     ax3.set_yticks(range(len(performance_df)))
     ax3.set_yticklabels([f'Robot {int(row["robot_id"])}' for _, row in performance_df.iterrows()])
     ax3.set_title("Movement Timeline: Advanced (Colored) vs. Stopped (Gray)", fontsize=16)
     ax3.set_xlabel("Simulation Step")
     
-    # Force X-Axis to use Integers and fix range
     ax3.xaxis.set_major_locator(ticker.MaxNLocator(integer=True))
     ax3.set_xlim(0, max_steps)
     ax3.grid(axis='x', linestyle='--', alpha=0.7)
 
-    # Custom Legend
     from matplotlib.lines import Line2D
     custom_lines = [Line2D([0], [0], color='gray', lw=8),
                     Line2D([0], [0], color=stopped_color, lw=8, alpha=0.8)]
-    ax3.legend(custom_lines, ['Advanced', 'Stopped/Waiting'], loc='upper left', bbox_to_anchor=(1, 1))
+    ax3.legend(custom_lines, ['Advanced', 'Stopped/Waiting'], loc='upper left', bbox_to_anchor=(1, 0))
 
-    # Increased hspace (0.6) to ensure titles/labels don't overlap
     plt.subplots_adjust(top=0.90, hspace=0.6, bottom=0.08, left=0.08, right=0.85)
     
     output_filename = f"performance_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"

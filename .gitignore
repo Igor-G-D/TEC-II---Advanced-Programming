@@ -4,6 +4,7 @@ ConvexHull/__pycache__/*
 */tempCodeRunnerFile.py
 ConvexHull/convexhull_analysis_*
 */simulation_analysis_*
+*/performance_analysis*
 
 MinkowskiAddition/__pycache__/convexhull.cpython-312.pyc
-CollisionAvoidance/performance_analysis*
+

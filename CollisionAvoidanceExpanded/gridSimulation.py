@@ -59,7 +59,7 @@ algorithm_index = 0
 cell_shape_names = ["rectangular", "hexagonal"]
 cell_shape_index = 0
 avoidance_methods = ["no_communication", "direct_communication", "indirect_communication"]
-avoidance_method_index = 2
+avoidance_method_index = 0
 
 # logs
 path_size = []

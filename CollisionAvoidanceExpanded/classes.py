@@ -431,6 +431,9 @@ class NoCommunicationAvoidanceRobot(RobotDecoratorAvoidance):
         self.consecutive_waits = 0 
 
     def step(self):
+        if self.is_at_goal():
+            return
+        
         old_position = self.get_curr_pos()
         next_pos = self.get_curr_pos(offset=1)
         
@@ -508,17 +511,23 @@ class DirectCommunicationAvoidanceRobot(RobotDecoratorAvoidance):
                     self.waiting_for_peer = False
 
         if event.event_type == EventType.GOAL_REACHED_BLOCK:
+            next_pos = self.get_curr_pos(offset=1)
             if event.data.get("blocked_robot_id") == self.id:
                 print(f"DIRECT: Robot {self.id} blocked by finished robot, replanning route")
                 if self._attempt_escape_and_replan(next_pos):
                     self.consecutive_waits = 0
 
     def step(self):
+        
+        if self.is_at_goal():
+            return
+        
         self.waiting_for_peer = False
         
         next_pos = self.get_curr_pos(offset=1)
         if not next_pos or next_pos == self.get_curr_pos():
             self._robot.step()
+            self.movement_history.append(True)
             self.consecutive_waits = 0
             return
 
@@ -536,7 +545,9 @@ class DirectCommunicationAvoidanceRobot(RobotDecoratorAvoidance):
             if self.simulation.is_position_safe(self, next_pos):
                 self.overhead.append(time.perf_counter() - start_time)
                 self._robot.step()
+                self.movement_history.append(True)
                 self.consecutive_waits = 0
+                return
             else:
                 self.overhead.append(time.perf_counter() - start_time)
                 print(f"DIRECT: Robot {self.id} has priority but {next_pos} is occupied, waiting for the way to be clear")
@@ -571,10 +582,15 @@ class IndirectCommunicationAvoidanceRobot(RobotDecoratorAvoidance):
                 self.reservation_map[reserved_pos] = reserver_id
 
     def step(self):
+        
+        if self.is_at_goal():
+            return
+        
         next_pos = self.get_curr_pos(offset=1)
         
         if not next_pos or next_pos == self.get_curr_pos():
             self._robot.step()
+            self.movement_history.append(True)
             self.consecutive_waits = 0 # reset if arrived at goal
             return
 
@@ -592,6 +608,7 @@ class IndirectCommunicationAvoidanceRobot(RobotDecoratorAvoidance):
             ))
             self.overhead.append(time.perf_counter() - start_time)
             self._robot.step()
+            self.movement_history.append(True)
             self.consecutive_waits = 0 
         else:
             self.consecutive_waits += 1
