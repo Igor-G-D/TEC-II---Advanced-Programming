@@ -384,17 +384,22 @@ class RobotDecoratorAvoidance(RobotDecorator):
     def __init__(self, decorated_robot: Robot):
         super().__init__(decorated_robot)
         self._overhead_history = [] 
+        self._blocked_squares = []
         
     @property
     def overhead(self): 
         return self._overhead_history 
+    @property
+    def blocked_squares(self): 
+        return self._blocked_squares
     
     def _attempt_escape_and_replan(self, blocked_square) -> bool:
         current_pos = self.get_curr_pos()
         grid = self.simulation.grid
         
+        self.blocked_squares.append(blocked_square)
+        
         # Get all squares currently occupied by other robots
-        dynamic_obstacles = [blocked_square]
 
         neighbors = grid.get_neighbors(current_pos)
         np.random.shuffle(neighbors)
@@ -403,7 +408,7 @@ class RobotDecoratorAvoidance(RobotDecorator):
             # safety check
             if not grid.is_obstacle(neighbor) and self.simulation.is_position_safe(self, neighbor):
                 
-                avoidance_grid = DynamicObstacleGrid(grid, dynamic_obstacles)
+                avoidance_grid = DynamicObstacleGrid(grid, self.blocked_squares)
                 
                 algorithm = self.simulation.algorithm_factory.create_algorithm(
                     self.get_pathfinding_algorithm_type()
