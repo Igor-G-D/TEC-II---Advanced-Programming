@@ -8,3 +8,5 @@ ConvexHull/convexhull_analysis_*
 
 MinkowskiAddition/__pycache__/convexhull.cpython-312.pyc
 
+CollisionAvoidanceExpanded/RVO_Py_MAS-master
+CollisionAvoidanceExpanded/RVO.py

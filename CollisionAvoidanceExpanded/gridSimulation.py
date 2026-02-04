@@ -58,7 +58,7 @@ algorithms = ["astar", "dijkstra"]
 algorithm_index = 0
 cell_shape_names = ["rectangular", "hexagonal"]
 cell_shape_index = 0
-avoidance_methods = ["no_communication", "direct_communication", "indirect_communication"]
+avoidance_methods = ["no_communication", "direct_communication", "indirect_communication"] #, "rvo"]
 avoidance_method_index = 0
 
 # logs
@@ -424,7 +424,6 @@ for i in range(len(simulation.robots)):
 performance_df = pd.DataFrame(performance_data)
 performance_df.to_csv(os.path.join(folder_name, 'performance_log.csv'), index=False)
 
-# NOTE: overhead_log.csv is no longer generated as requested
 cv2.imwrite(os.path.join(folder_name, "simulation_result.png"), main_image)
 
 print(f"Exported simulation parameters to {folder_name}/simulation_info.csv")

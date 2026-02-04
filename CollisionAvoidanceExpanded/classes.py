@@ -7,7 +7,6 @@ from interfaces import Grid
 from abc import ABCMeta, ABC, abstractmethod
 from enum import Enum
 
-
 class EventType(Enum):
     MOVEMENT = "movement"
     ARRIVAL = "arrival"
@@ -135,6 +134,8 @@ class Simulation:
             decorated_robot = DirectCommunicationAvoidanceRobot(decorated_robot, self)
         elif avoidance_method == "indirect_communication":
             decorated_robot = IndirectCommunicationAvoidanceRobot(decorated_robot, self)
+        #elif avoidance_method == "rvo":
+        #    decorated_robot = RVOAvoidanceRobot(decorated_robot, self)
         
         self.robots.append(decorated_robot)
         self.event_manager.subscribe(EventType.MOVEMENT, decorated_robot)
@@ -416,6 +417,12 @@ class RobotDecoratorAvoidance(RobotDecorator):
                 
                 new_path = algorithm.find_path(avoidance_grid, neighbor, self.goal.position)
                 
+                if new_path == []:
+                    print(f"Robot {self.id} is stuck, likely due to other robots. Clearing dynamic obstacles in an attempt to find a new path")
+                    self.blocked_squares.clear()
+                    
+                    new_path = algorithm.find_path(avoidance_grid, neighbor, self.goal.position)
+                
                 if new_path:
                     self.set_path(new_path)
                     self.simulation.event_manager.notify(Event(
@@ -635,7 +642,9 @@ class IndirectCommunicationAvoidanceRobot(RobotDecoratorAvoidance):
             
             # ckear up old reservations for next step
             self.reservation_map.clear()
-            
+        
+#class RVOAvoidanceRobot(RobotDecoratorAvoidance):
+    
 class SingletonGridMeta(ABCMeta): 
     _instances = {}
     
